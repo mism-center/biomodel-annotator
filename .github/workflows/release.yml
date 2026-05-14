@@ -1,0 +1,130 @@
+name: Package & Release Skill
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next semver
+        id: bump
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          latest="$(git tag -l 'v*' --sort=-v:refname | head -n1)"
+          if [ -z "$latest" ]; then
+            major=0; minor=0; patch=0
+            echo "No prior tag. Starting from v0.0.0."
+          else
+            echo "Latest tag: $latest"
+            ver="${latest#v}"
+            IFS='.' read -r major minor patch <<< "$ver"
+          fi
+
+          msg="$(git log -1 --pretty=%B)"
+          if echo "$msg" | grep -qiE '(^|[^[:alnum:]])#major([^[:alnum:]]|$)'; then
+            major=$((major + 1)); minor=0; patch=0
+            bump=major
+          elif echo "$msg" | grep -qiE '(^|[^[:alnum:]])#minor([^[:alnum:]]|$)'; then
+            minor=$((minor + 1)); patch=0
+            bump=minor
+          else
+            patch=$((patch + 1))
+            bump=patch
+          fi
+
+          new="v${major}.${minor}.${patch}"
+          echo "Bump: $bump -> $new"
+          echo "version=$new" >> "$GITHUB_OUTPUT"
+          echo "version_bare=${new#v}" >> "$GITHUB_OUTPUT"
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+
+      - name: Build skill zip (strict allowlist)
+        id: pack
+        run: |
+          set -euo pipefail
+          ver="${{ steps.bump.outputs.version }}"
+          name="biomodel-annotator"
+          staging="$(mktemp -d)/$name"
+          mkdir -p "$staging"
+
+          # Allowlist: SKILL.md + every file under references/.
+          # Nothing else ships. No LICENSE, no CLAUDE.md, no .github, no .git,
+          # no editor cruft, no future top-level files unless explicitly added here.
+          test -f SKILL.md || { echo "SKILL.md missing"; exit 1; }
+          test -d references || { echo "references/ missing"; exit 1; }
+          cp SKILL.md "$staging/SKILL.md"
+          mkdir -p "$staging/references"
+          # Only .md files in references/ (the two reference docs SKILL.md cites).
+          shopt -s nullglob
+          ref_files=(references/*.md)
+          [ ${#ref_files[@]} -gt 0 ] || { echo "no reference .md files"; exit 1; }
+          cp "${ref_files[@]}" "$staging/references/"
+
+          # Verify staging contains ONLY allowlisted paths.
+          unexpected="$(cd "$staging" && find . -mindepth 1 \
+            ! -path './SKILL.md' \
+            ! -path './references' \
+            ! -path './references/*.md' \
+            -print)"
+          if [ -n "$unexpected" ]; then
+            echo "ERROR: unexpected files in staging:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+          zip_path="$PWD/${name}-${ver}.zip"
+          (cd "$(dirname "$staging")" && zip -r "$zip_path" "$name" >/dev/null)
+
+          echo "Packaged contents:"
+          unzip -l "$zip_path"
+
+          # Final guard: anything but SKILL.md or references/*.md inside zip fails the build.
+          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(SKILL\.md|references/(|[^/]+\.md))$' || true)"
+          if [ -n "$bad" ]; then
+            echo "ERROR: zip contains non-skill entries:"
+            echo "$bad"
+            exit 1
+          fi
+
+          echo "zip_path=$zip_path" >> "$GITHUB_OUTPUT"
+          echo "zip_name=$(basename "$zip_path")" >> "$GITHUB_OUTPUT"
+
+      - name: Create & push tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ver="${{ steps.bump.outputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$ver" -m "Release $ver"
+          git push origin "$ver"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ver="${{ steps.bump.outputs.version }}"
+          gh release create "$ver" \
+            --title "$ver" \
+            --notes "Automated release of biomodel-annotator skill.
+
+          Bump type: ${{ steps.bump.outputs.bump }}
+          Commit: ${{ github.sha }}" \
+            "${{ steps.pack.outputs.zip_path }}"
