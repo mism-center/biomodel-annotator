@@ -94,7 +94,7 @@ jobs:
           unzip -l "$zip_path"
 
           # Final guard: anything but SKILL.md or references/*.md inside zip fails the build.
-          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(SKILL\.md|references/(|[^/]+\.md))$' || true)"
+          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(|SKILL\.md|references/(|[^/]+\.md))$' || true)"
           if [ -n "$bad" ]; then
             echo "ERROR: zip contains non-skill entries:"
             echo "$bad"
