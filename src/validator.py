@@ -32,30 +32,30 @@ import yaml
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Required field lists (from POC-2/templates/)
+# Required field lists — aligned to references/schema.md
 # ---------------------------------------------------------------------------
 
-REQUIRED_METADATA = [
-    "name",
-    "description",
-    "organism",
-    "biological_process",
-    "model_scale",
-    "formalism",
-    "source_repository",
-    "representation_format",
-    "model_components",
-    "inputs",
-    "outputs",
+# Fields required in annotation['model'] (Section A).
+# kind values:
+#   "scalar"   — envelope {value, source, confidence}; value must be non-empty
+#   "list"     — must be a non-empty list
+#   "dict:KEY" — must be a dict whose KEY sub-field is present
+REQUIRED_SECTION_A: list[tuple[str, str]] = [
+    ("name",             "scalar"),
+    ("short_description","scalar"),
+    ("model_class",      "list"),
+    ("formalism",        "list"),
+    ("determinism",      "scalar"),
+    ("time_dynamics",    "scalar"),
+    ("spatial",          "scalar"),
 ]
 
-REQUIRED_EXECUTION = [
-    "execution_engine",
-    "python_version",
-    "dependencies",
-    "setup_instructions",
-    "execution_command",
-    "expected_outputs",
+# Fields required in annotation['execution'] (Section B).
+REQUIRED_SECTION_B: list[tuple[str, str]] = [
+    ("status",           "scalar"),
+    ("language",         "dict:name"),
+    ("environment_kind", "scalar"),
+    ("entry_points",     "list"),
 ]
 
 # Fields eligible for ontology mapping in the full annotation
@@ -69,6 +69,21 @@ _ONTOLOGY_ELIGIBLE_PATHS = [
     "model.biology.anatomy",
     "execution.language",
 ]
+
+
+def _get_leaf_value(field: Any) -> Any:
+    """
+    Extract the plain value from a schema leaf envelope or bare scalar.
+
+    Schema leaf fields use the shape ``{value: ..., source: ..., confidence: ...}``.
+    Returns ``field["value"]`` when that key is present, otherwise returns ``field``
+    itself (handles bare scalars for forward-compat). Returns ``None`` for None input.
+    """
+    if field is None:
+        return None
+    if isinstance(field, dict):
+        return field.get("value")
+    return field
 
 
 class Validator:
@@ -112,7 +127,7 @@ class Validator:
         annotation = _safe_parse_yaml(annotation_yaml, "annotation.yaml")
 
         # --- Structural validation ---
-        structural = self._check_structural(metadata, execution)
+        structural = self._check_structural(metadata, execution, annotation)
         report["structural_validation"] = structural
         if structural["status"] == "fail":
             report["exit_code"] = 1
@@ -151,30 +166,32 @@ class Validator:
         self,
         metadata: dict[str, Any] | None,
         execution: dict[str, Any] | None,
+        annotation: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        missing: list[str] = []
-        empty: list[str] = []
+        """
+        Validate structural completeness of the assembled annotation.
 
-        if metadata is None:
-            missing.extend([f"metadata.{f}" for f in REQUIRED_METADATA])
+        Operates on the full ``annotation`` dict (top-level keys: model, execution, io,
+        provenance). The ``metadata`` and ``execution`` flat-dict parameters are kept for
+        callers that still use the legacy three-YAML interface but are no longer
+        authoritative; a deprecation warning is emitted when they are used as fallback.
+        """
+        if annotation is not None:
+            section_a = self._check_section_a(annotation)
+            section_b = self._check_section_b(annotation)
+            missing = section_a["missing"] + section_b["missing"]
+            empty   = section_a["empty"]   + section_b["empty"]
         else:
-            for field in REQUIRED_METADATA:
-                val = metadata.get(field)
-                if val is None:
-                    missing.append(f"metadata.{field}")
-                elif val == "":
-                    empty.append(f"metadata.{field}")
-                # needs_review counts as present — do not add to missing/empty
-
-        if execution is None:
-            missing.extend([f"execution.{f}" for f in REQUIRED_EXECUTION])
-        else:
-            for field in REQUIRED_EXECUTION:
-                val = execution.get(field)
-                if val is None:
-                    missing.append(f"execution.{field}")
-                elif val == "":
-                    empty.append(f"execution.{field}")
+            # Legacy path — POC-2 flat-dict callers only.
+            log.warning(
+                "_check_structural called without annotation dict; "
+                "falling back to legacy flat-dict validation (deprecated)."
+            )
+            missing, empty = [], []
+            if metadata is None:
+                missing.append("annotation.model (not provided)")
+            if execution is None:
+                missing.append("annotation.execution (not provided)")
 
         status = "fail" if (missing or empty) else "pass"
         return {
@@ -182,6 +199,66 @@ class Validator:
             "missing_required_fields": missing,
             "empty_required_fields": empty,
         }
+
+    def _check_section_a(self, annotation: dict[str, Any]) -> dict[str, Any]:
+        """Check required Section A (model) fields against REQUIRED_SECTION_A."""
+        model = annotation.get("model") or {}
+        missing: list[str] = []
+        empty: list[str] = []
+
+        for field, kind in REQUIRED_SECTION_A:
+            raw = model.get(field)
+            path = f"model.{field}"
+
+            if raw is None:
+                missing.append(path)
+                continue
+
+            if kind == "scalar":
+                val = _get_leaf_value(raw)
+                if val is None or val == "":
+                    empty.append(path)
+
+            elif kind == "list":
+                if not isinstance(raw, list) or len(raw) == 0:
+                    empty.append(path)
+
+            elif kind.startswith("dict:"):
+                sub_key = kind.split(":", 1)[1]
+                if not isinstance(raw, dict) or raw.get(sub_key) is None:
+                    empty.append(f"{path}.{sub_key}")
+
+        return {"missing": missing, "empty": empty}
+
+    def _check_section_b(self, annotation: dict[str, Any]) -> dict[str, Any]:
+        """Check required Section B (execution) fields against REQUIRED_SECTION_B."""
+        execution = annotation.get("execution") or {}
+        missing: list[str] = []
+        empty: list[str] = []
+
+        for field, kind in REQUIRED_SECTION_B:
+            raw = execution.get(field)
+            path = f"execution.{field}"
+
+            if raw is None:
+                missing.append(path)
+                continue
+
+            if kind == "scalar":
+                val = _get_leaf_value(raw)
+                if val is None or val == "":
+                    empty.append(path)
+
+            elif kind == "list":
+                if not isinstance(raw, list) or len(raw) == 0:
+                    empty.append(path)
+
+            elif kind.startswith("dict:"):
+                sub_key = kind.split(":", 1)[1]
+                if not isinstance(raw, dict) or raw.get(sub_key) is None:
+                    empty.append(f"{path}.{sub_key}")
+
+        return {"missing": missing, "empty": empty}
 
     # ------------------------------------------------------------------
     # Semantic validation

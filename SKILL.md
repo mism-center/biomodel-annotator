@@ -71,6 +71,24 @@ Read the README first; it's where authors put the high-level pitch. Then skim th
 
 For every field, record the file you found it in. If you inferred it from context rather than reading it verbatim, set `confidence: inferred`. **For multi-element fields like `model_class` and `formalism`, each list entry must carry its own `source` pointing to distinct evidence** — don't reuse the README citation for every paradigm. If you claim a model is agent-based + ODE, one entry's source should point to where the agent-based framing comes from (often the README or framework name) and the other to where the ODE evidence comes from (a process file's rate equations, a solver import).
 
+#### Section A completeness check — do this before advancing to Pass 2
+
+Verify each item below against the YAML fragment you have built so far. Fix any failure before continuing — do not carry errors forward into Pass 2.
+
+- `model.name` is populated and not `needs_review`.
+- `model.short_description` is populated.
+- `model.model_class` is a non-empty list; each entry has a **distinct** `source`.
+- `model.formalism` is a non-empty list; each entry has a **distinct** `source`.
+- `model.model_class` and `model.formalism` are **separate lists** backed by separate evidence — the same source line may not justify both.
+- `model.determinism` is one of: `deterministic` / `stochastic` / `hybrid` / `unknown`.
+- `model.time_dynamics` is set (even if `unknown`).
+- `model.spatial` is set (even if `unknown`).
+- `model.biology.organisms` has ≥ 1 entry, **or** you have recorded `confidence: none` with a curator note explaining why no organism was found.
+- Every **envelope-style** leaf field (those with a `value:` sub-key, e.g. `name`, `short_description`, `model_class` entries, `biology.*` entries) carries a `source`. If no source exists, write `source: "not found in sources"` — do not omit the key. Note: `determinism`, `time_dynamics`, `spatial`, and `multi_scale` are bare scalars in the schema — they do NOT use the envelope and do not carry `source` or `confidence`.
+- No email address appears anywhere under `model.authors`. Email belongs only in `model.contacts`.
+
+If an item cannot be resolved from available sources, set `confidence: inferred` or `confidence: none` as appropriate and add a note to `provenance.notes`. Do **not** use `needs_review` as a shortcut to skip the check.
+
 ### Pass 2 — Execution environment (Section B)
 
 You want a reviewer to be able to run this model after reading the YAML. Pull out:
@@ -84,6 +102,19 @@ You want a reviewer to be able to run this model after reading the YAML. Pull ou
 - **Tests**: presence and how to invoke them.
 
 If the model is just a single file (e.g. an SBML file), execution metadata is mostly about the simulator it targets — capture that instead.
+
+#### Section B completeness check — do this before advancing to Pass 3
+
+Verify each item below. Fix any failure before continuing.
+
+- `execution.status` is one of: `characterized` / `partially_characterized` / `not_determined`. (Bare scalar — no envelope; if not determinable, use `not_determined`.)
+- `execution.language.name` is populated (or set to `null` with an explanation in `execution.notes` if the language genuinely cannot be determined). `execution.language` uses its own dict structure with a top-level `source:` — it does not use the `{value, source, confidence}` envelope.
+- `execution.environment_kind` is set.
+- `execution.entry_points` is a non-empty list; each entry's `command` is a **verbatim copy** of the command as it appears in the source (README "Usage", `[project.scripts]`, Dockerfile `CMD`, etc.) — do not paraphrase.
+- If `execution.language.name` is populated, `execution.dependencies.runtime` is either populated or explicitly empty with a note explaining why no runtime deps were found.
+- Every **envelope-style** leaf field (those with a `value:` sub-key, e.g. `environment_kind`, `compute.*`, `entry_points[].command`) carries a `source`. Note: `status` is a bare scalar and does not carry `source` or `confidence`.
+
+Same rule as Pass 1: use `confidence: inferred` / `confidence: none` rather than `needs_review` when a value is uncertain.
 
 ### Pass 3 — Inputs and outputs (Section C)
 

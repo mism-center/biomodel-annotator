@@ -16,15 +16,16 @@ provenance: { ... }  # Run metadata
 
 ```yaml
 model:
-  name: { value, source, confidence }
-  short_description: { value, source, confidence }
-  long_description: { value, source, confidence }
-  version: { value, source, confidence }
-  identifier:                          # If model has a registered ID (e.g. BIOMD0000000012)
-    scheme: "biomodels" | "doi" | "url" | "other"
+  name: { value, source, confidence } #REQUIRED
+  short_description: { value, source, confidence } #REQUIRED
+  long_description: { value, source, confidence } #REQUIRED
+  version: { value, source, confidence } #REQUIRED. probably auto generate
+  doi: {value, source, confidence}     #Optional. We will need DOIs in the future, but may not for POC2.
+  identifier:                          #REQUIRED. Should auto-generate identifier.
+    scheme: "biomodels", "doi", "url", "other"
     value: ...
     source: ...
-  model_class:                         # list, ontology-mapped to MAMO. Length 1 for pure-paradigm models, ≥2 for hybrids (e.g. agent-based + ODE).
+  model_class:                         #Optional. list, ontology-mapped to MAMO. Length 1 for pure-paradigm models, ≥2 for hybrids (e.g. agent-based + ODE).
     - value: "agent-based model"
       iri: "http://identifiers.org/mamo/MAMO_0000028"
       ontology_label: "agent-based model"
@@ -32,57 +33,69 @@ model:
       mapping_confidence: high
       source: ...
       confidence: ...
-  formalism:                           # list, ontology-mapped to MAMO/KISAO. Each formalism the model uses (ODE, SDE, Boolean, Markov chain, ...). Length 1 for single-paradigm models, ≥2 for hybrids. Paired conceptually with model_class but kept separate because model_class is the modeling *approach* (agent-based, constraint-based) while formalism is the *mathematical machinery* (ODE, SDE).
+  formalism:                           # Optional. list, ontology-mapped to MAMO/KISAO. Each formalism the model uses (ODE, SDE, Boolean, Markov chain, ...). Length 1 for single-paradigm models, ≥2 for hybrids. Paired conceptually with model_class but kept separate because model_class is the modeling *approach* (agent-based, constraint-based) while formalism is the *mathematical machinery* (ODE, SDE). 
     - value: ...
       iri: ...
       ontology_label: ...
-      ontology: "mamo" | "kisao"
+      ontology: "mamo", "kisao"
       mapping_confidence: ...
       source: ...
       confidence: ...
-  determinism: "deterministic" | "stochastic" | "hybrid" | "unknown"
-  time_dynamics: "continuous" | "discrete" | "event-driven" | "static" | "unknown"
-  spatial: "non-spatial" | "well-mixed" | "compartmental" | "1D" | "2D" | "3D" | "lattice" | "off-lattice" | "unknown"
-  multi_scale: true | false | unknown
+  determinism: "deterministic", "stochastic", "hybrid", "unknown" #Optional.
+  time_dynamics: "continuous", "discrete", "event-driven", "static", "unknown" #Optional.
+  spatial: "non-spatial", "well-mixed", "compartmental", "1D", "2D", "3D", "lattice", "off-lattice", "unknown" #Optional.
+  multiscale: true | false | unknown #REQUIRED
+  model_scales:                      #REQUIRED. the scale(s) of the model (e.g., "molecular", "cellular", "tissue", "individual", "population"). list
+    - { ... }
   biology:
-    organisms:                         # list, ontology-mapped to NCBITaxon
+    species:                         #Optional. Host or model organism (e.g., "SARS-CoV-2", "HIV-1", "Homo sapiens"). list, ontology-mapped to NCBITaxon
       - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
-    cell_types:                        # list, ontology-mapped to CL
+    infectious_agent:                #Optional. pathogen or organism of study. list, ontology-mapped to NCBI Taxonomy IDs
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
+    health_condition:                 #Optional. mapped to disease or clinical indication. list, ontology mapped to Mondo Disease Ontology (MONDO), Human Phenotype Ontology (HPO), or and Disease Ontology (DOID)
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
+    topic_category:                    #Optional. domain-level filtering and support topic-based navigation. list, mapped to EDAM Ontology
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
+    cell_types:                        #Optional. list, ontology-mapped to CL
       - { ... }
-    anatomy:                           # list, ontology-mapped to UBERON
+    anatomy:                           #Optional. list, ontology-mapped to UBERON
       - { ... }
-    biological_processes:              # list, ontology-mapped to GO
+    biological_processes:              #Optional. list, ontology-mapped to GO
       - { ... }
-    molecular_entities:                # list, ontology-mapped to ChEBI; small molecules, ions, drugs
+    molecular_entities:                #Optional. list, ontology-mapped to ChEBI; small molecules, ions, drugs
       - { ... }
-    proteins_genes:                    # list, free-text + UniProt / Ensembl identifiers when available
+    proteins_genes:                    #Optional. list, free-text + UniProt / Ensembl identifiers when available
       - { value, identifier: { scheme, value }, source, confidence }
   authors:                              # who created the model (intellectual authorship). Author identity is separate from how to reach a current maintainer; do not put email here unless the user has no separate contacts block.
-    - name: ...
-      affiliation: ...
-      orcid: ...                       # full ORCID URL
-      role: "author" | "co-author" | "principal investigator" | "developer" | null
-      source: ...
+    - name: ... #REQUIRED
+      affiliation: ... #REQUIRED
+      orcid: ...                     #Optional.  # full ORCID URL
+      role: "author", "co-author", "principal investigator", "developer", null #Optional.
+      source: ...            
   contacts:                             # how to reach someone about the model now — may overlap with authors, may not. Keeps "who wrote it" separate from "who to email about it".
-    - name: ...
-      role: "corresponding author" | "maintainer" | "support" | "submitter" | null
-      email: ...
-      affiliation: ...
+    - name: ... #REQUIRED
+      role: "corresponding author", "maintainer", "support", "submitter", null #REQUIRED
+      email: ... #REQUIRED
+      affiliation: ... #Optional.
       source: ...
   license:
-    spdx_id: "MIT" | "Apache-2.0" | "GPL-3.0-or-later" | ...
+    spdx_id: "MIT", "Apache-2.0", "GPL-3.0-or-later" , ... #REQUIRED
     source: ...
     confidence: ...
-  references:                          # papers, preprints
+  publications:                          # papers, preprints
     - title: ...
       doi: ...
       pmid: ...
       url: ...
       source: ...
   related_resources:                   # data, prior models the curators want linked
-    - qualifier: "bqmodel:isDerivedFrom" | "bqbiol:isVersionOf" | ...
+    - qualifier: "bqmodel:isDerivedFrom", "bqbiol:isVersionOf", ...
       identifier: { scheme, value }
       source: ...
+  funding:                             #Grant numbers or funding acknowledgments (e.g., "NIAID U19 AI123456").
+    -acknowledgement: ...
+  
+  
 ```
 
 ## Section B — `execution`
