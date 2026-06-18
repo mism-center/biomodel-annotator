@@ -550,3 +550,45 @@ def _str_val(val: Any) -> str:
         return ""
     s = str(val).strip()
     return "" if s in ("needs_review", "deferred", "null") else s
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point — structural-only validation for mid-workflow checkpoints
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    import sys
+
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Validate Section A (model) and Section B (execution) of an annotation YAML. "
+            "Intended to be run after Pass 1 and Pass 2 of the biomodel-annotator skill, "
+            "before Pass 3 begins. Exits 0 on pass, 1 on failure."
+        )
+    )
+    parser.add_argument(
+        "--annotation",
+        required=True,
+        metavar="FILE",
+        help="Path to the (partial) annotation YAML file.",
+    )
+    parser.add_argument(
+        "--input-path",
+        default=".",
+        metavar="DIR",
+        help="Root directory of the model repo being annotated. Defaults to cwd.",
+    )
+    args = parser.parse_args()
+
+    annotation_text = Path(args.annotation).read_text(encoding="utf-8")
+    v = Validator(input_path=Path(args.input_path))
+    annotation = _safe_parse_yaml(annotation_text, args.annotation)
+
+    result = v._check_structural(None, None, annotation)
+
+    print(json.dumps(result, indent=2))
+    sys.exit(0 if result["status"] == "pass" else 1)

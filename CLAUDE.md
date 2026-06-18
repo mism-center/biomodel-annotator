@@ -4,15 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A single Claude Code **skill** (not an application). There is no source code, build system, test suite, or package manifest. The repo is three Markdown files that Claude Code loads at skill-invocation time:
+A Claude Code **skill** plus a small Python support layer. The skill itself is three Markdown files that Claude Code loads at invocation time:
 
 - `SKILL.md` — frontmatter (`name`, `description`) + the full operating procedure for the `biomodel-annotator` skill.
 - `references/schema.md` — the YAML schema the skill must emit.
 - `references/ontologies.md` — per-field routing to OLS ontologies + query strategy.
 
-There are no commands to run here. "Working in this repo" means editing the three Markdown files, not running tools.
+The Python support layer lives in `src/` and ships with the skill in every release zip:
 
-Note: a parent `CLAUDE.md` at `../.claude/CLAUDE.md` describes a generic Python/PowerShell workflow. That guidance does not apply to this directory — there is no Python here, no venv, no PyLint target. Treat the parent file as out of scope when editing skill content.
+- `src/validator.py` — structural validation of Section A (`model:`) and Section B (`execution:`) against the required fields in `references/schema.md`.
+- `src/mcp_server.py` — FastMCP stdio server that exposes `validator.py` as the `biomodel-validator` MCP tool, called by the skill at the validation checkpoint between Pass 2 and Pass 3.
+
+**When editing Markdown skill content** (the three `.md` files), no Python tools are needed. **When editing `src/`**, standard Python applies: `pip install fastmcp pyyaml`, and run `python src/mcp_server.py` to start the server locally for testing.
+
+Note: a parent `CLAUDE.md` at `../.claude/CLAUDE.md` describes a generic Python/PowerShell workflow. Treat it as out of scope when editing skill or `src/` content here — there is no venv at this directory level and no PyLint target to run.
 
 ## What the skill does (architecture)
 

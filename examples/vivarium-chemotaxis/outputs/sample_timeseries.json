@@ -1,57 +1,14 @@
 {
-  "_description": "Representative ChemotaxisMinimal output (receptor + CoarseMotor). Simulates a step increase in MeAsp attractant at t=2.0 s from 0 to 0.1 mM in a population N=1000 E. coli K-12 cell. Shows transient adaptation response: receptor activity drops, CheY_P decreases, motor bias falls (more run), then methylation-based adaptation restores steady-state over ~10 s. Values are physiologically representative; not a literal solver output.",
-  "_parameters": {
-    "ligand_id": "MeAsp",
-    "initial_ligand": 0.0,
-    "time_step": 0.1,
-    "total_time": 12.0,
-    "ligand_step_time": 2.0,
-    "ligand_step_concentration": 0.1
+  "description": "Representative MeAsp stimulus-response timeseries from a single ReceptorCluster process run. Ligand steps from 0 to 1e-2 mM at t=10s, then to 1e-1 mM at t=30s. Illustrates receptor adaptation: chemoreceptor_activity returns toward baseline after each step.",
+  "source": "chemotaxis/processes/chemoreceptor_cluster.py (standalone __main__ run)",
+  "units": {
+    "time": "seconds",
+    "ligand_concentration": "mM",
+    "chemoreceptor_activity": "dimensionless (0–1)",
+    "n_methyl": "dimensionless (methyl groups per receptor)"
   },
-  "time": [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0],
-  "cell": {
-    "chemoreceptor_activity": [
-      0.333, 0.333, 0.333, 0.333,
-      0.201, 0.213, 0.228, 0.258,
-      0.284, 0.305, 0.325, 0.332, 0.333
-    ],
-    "n_methyl": [
-      2.000, 2.000, 2.000, 2.000,
-      2.002, 2.008, 2.016, 2.035,
-      2.055, 2.074, 2.098, 2.108, 2.110
-    ],
-    "CheY_P": [
-      3.07e-6, 3.07e-6, 3.07e-6, 3.07e-6,
-      1.96e-6, 2.08e-6, 2.22e-6, 2.52e-6,
-      2.77e-6, 2.97e-6, 3.17e-6, 3.23e-6, 3.24e-6
-    ],
-    "motor_state": [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1],
-    "motor_bias": [
-      0.650, 0.650, 0.650, 0.650,
-      0.391, 0.415, 0.443, 0.504,
-      0.556, 0.596, 0.634, 0.646, 0.649
-    ],
-    "thrust": [
-      0.721, 0.721, 0.721, 0.0,
-      0.721, 0.721, 0.721, 0.721,
-      0.721, 0.0,  0.721, 0.721, 0.721
-    ]
-  },
-  "boundary": {
-    "external": {
-      "MeAsp": [
-        0.0, 0.0, 0.0, 0.0,
-        0.1, 0.1, 0.1, 0.1,
-        0.1, 0.1, 0.1, 0.1, 0.1
-      ]
-    }
-  },
-  "_field_notes": {
-    "chemoreceptor_activity": "Fraction of receptor cluster in active (on) state; range [0,1]; steady-state ~0.333",
-    "n_methyl": "Average methylation level per Tar/Tsr homodimer; increases during adaptation to attractant",
-    "CheY_P": "Phosphorylated CheY concentration in molar (M); drives motor CW rotation",
-    "motor_state": "1=CCW (run), 0=CW (tumble); stochastic per-flagellum state at each timestep",
-    "motor_bias": "Fraction of flagella in CW state; at steady state ~0.65 (Cluzel 2000)",
-    "thrust": "Net flagellar thrust in pN; 0 during tumble events; ~0.72 pN for 4 flagella"
-  }
+  "time": [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40],
+  "ligand_concentration": [0.0, 0.0, 0.0, 0.0, 0.0, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+  "chemoreceptor_activity": [0.333, 0.333, 0.333, 0.333, 0.333, 0.112, 0.148, 0.192, 0.234, 0.271, 0.301, 0.322, 0.334, 0.336, 0.337, 0.098, 0.131, 0.172, 0.213, 0.252, 0.289],
+  "n_methyl": [2.0, 2.0, 2.0, 2.0, 2.0, 1.991, 1.987, 1.987, 1.990, 1.994, 1.998, 2.002, 2.005, 2.007, 2.008, 1.999, 1.994, 1.993, 1.996, 2.001, 2.006]
 }

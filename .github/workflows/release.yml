@@ -62,11 +62,13 @@ jobs:
           staging="$(mktemp -d)/$name"
           mkdir -p "$staging"
 
-          # Allowlist: SKILL.md + every file under references/.
+          # Allowlist: SKILL.md + every file under references/ + src/validator.py + src/mcp_server.py.
           # Nothing else ships. No LICENSE, no CLAUDE.md, no .github, no .git,
           # no editor cruft, no future top-level files unless explicitly added here.
-          test -f SKILL.md || { echo "SKILL.md missing"; exit 1; }
-          test -d references || { echo "references/ missing"; exit 1; }
+          test -f SKILL.md              || { echo "SKILL.md missing";              exit 1; }
+          test -d references            || { echo "references/ missing";            exit 1; }
+          test -f src/validator.py      || { echo "src/validator.py missing";       exit 1; }
+          test -f src/mcp_server.py     || { echo "src/mcp_server.py missing";      exit 1; }
           cp SKILL.md "$staging/SKILL.md"
           mkdir -p "$staging/references"
           # Only .md files in references/ (the two reference docs SKILL.md cites).
@@ -74,12 +76,19 @@ jobs:
           ref_files=(references/*.md)
           [ ${#ref_files[@]} -gt 0 ] || { echo "no reference .md files"; exit 1; }
           cp "${ref_files[@]}" "$staging/references/"
+          # Validator MCP server and its backing module.
+          mkdir -p "$staging/src"
+          cp src/validator.py  "$staging/src/"
+          cp src/mcp_server.py "$staging/src/"
 
           # Verify staging contains ONLY allowlisted paths.
           unexpected="$(cd "$staging" && find . -mindepth 1 \
             ! -path './SKILL.md' \
             ! -path './references' \
             ! -path './references/*.md' \
+            ! -path './src' \
+            ! -path './src/validator.py' \
+            ! -path './src/mcp_server.py' \
             -print)"
           if [ -n "$unexpected" ]; then
             echo "ERROR: unexpected files in staging:"
@@ -93,8 +102,8 @@ jobs:
           echo "Packaged contents:"
           unzip -l "$zip_path"
 
-          # Final guard: anything but SKILL.md or references/*.md inside zip fails the build.
-          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(|SKILL\.md|references/(|[^/]+\.md))$' || true)"
+          # Final guard: anything outside the allowlist inside zip fails the build.
+          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(|SKILL\.md|references/(|[^/]+\.md)|src/(|validator\.py|mcp_server\.py))$' || true)"
           if [ -n "$bad" ]; then
             echo "ERROR: zip contains non-skill entries:"
             echo "$bad"

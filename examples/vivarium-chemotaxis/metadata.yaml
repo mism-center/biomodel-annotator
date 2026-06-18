@@ -1,163 +1,86 @@
-# Section A — Model Identity and Biology
-# Extracted from outputs/annotation.yaml (schema_version: "0.1")
-# Passes completed: 0 (Inventory), 1 (Identity/biology)
-# Passes deferred: 3 (I/O), 4 (Ontology mapping — ols-ontology MCP not connected)
-# All iri: fields are null. See outputs/annotation.yaml provenance for details.
-
-# Registry compatibility fields (flat top-level — consumed by mism_registry check)
+# Flat registry fields required by mism_registry._check_registry()
+# These top-level keys are read directly by metadata.get("name"), etc.
 name: "vivarium-chemotaxis"
 source_repository: "https://github.com/vivarium-collective/vivarium-chemotaxis"
 execution_type: python
 
+# Section A extract — model identity and biology
+# Derived from outputs/annotation.yaml (model: block)
+schema_version: "0.1"
+
 model:
   name:
     value: "vivarium-chemotaxis"
-    source: "README.md:1"
+    source: "setup.py:12; README.md:1"
     confidence: high
-
   short_description:
-    value: >-
-      A Python library modelling Escherichia coli chemotaxis across molecular and cellular
-      scales using the vivarium compositional simulation framework. Implements four composable
-      processes (ReceptorCluster, FlagellaMotor, MembranePotential, CoarseMotor) that together
-      reproduce the MeAsp attractant stimulus-response described in Agmon & Spangler (2020).
-    source: "README.md:2-4, setup.py:16-17"
+    value: "A multi-scale agent-based library for modeling E. coli chemotaxis, integrating chemoreceptor cluster signaling, flagella motor dynamics, and membrane potential within the Vivarium framework."
+    source: "README.md:3-5"
     confidence: high
-
   version:
     value: "0.0.2"
-    source: "setup.py:13"
+    source: "setup.py:12"
     confidence: high
-
   identifier:
-    scheme: github
-    id: "vivarium-collective/vivarium-chemotaxis"
+    scheme: "url"
+    value: "https://github.com/vivarium-collective/vivarium-chemotaxis"
     source: "setup.py:21"
-    confidence: high
-
-  license:
-    value: MIT
-    source: "LICENSE:1, setup.py:22"
-    confidence: high
-
   model_class:
-    - value: "multi-scale model"
-      source: "README.md:3"
-      confidence: high
+    - value: "agent-based model"
       iri: null
       ontology_label: null
-      ontology: MAMO
-
+      ontology: "mamo"
+      source: "chemotaxis_flagella.py:22; paper_experiments.py:31"
+      confidence: high
+    - value: "constraint-based model"
+      iri: null
+      ontology_label: null
+      ontology: "mamo"
+      source: "chemotaxis_master.py:23-24"
+      confidence: high
   formalism:
     - value: "ordinary differential equation model"
-      source: "chemoreceptor_cluster.py:54-60"
-      confidence: high
       iri: null
       ontology_label: null
-      ontology: MAMO
+      ontology: "mamo"
+      source: "chemoreceptor_cluster.py:30-44"
+      confidence: medium
     - value: "stochastic model"
-      source: "flagella_motor.py:44-46"
-      confidence: high
       iri: null
       ontology_label: null
-      ontology: MAMO
-
-  determinism:
-    value: hybrid
-    source: "chemoreceptor_cluster.py:54-60, flagella_motor.py:44-46"
-    confidence: inferred
-
-  time_dynamics:
-    value: continuous
-    source: "coarse_motor.py:49"
-    confidence: inferred
-
-  spatial:
-    value: non-spatial
-    source: "README.md"
-    confidence: inferred
-
-  multiscale:
-    value: true
-    source: "README.md:3"
-    confidence: high
-
-  model_scales:
-    - value: molecular
-      source: "chemoreceptor_cluster.py:26, flagella_motor.py:50-52"
-      confidence: inferred
-    - value: cellular
-      source: "chemotaxis_master.py:23"
-      confidence: inferred
-
+      ontology: "mamo"
+      source: "flagella_motor.py:43-46"
+      confidence: high
+  determinism: hybrid
+  time_dynamics: discrete
+  spatial: non-spatial
+  multiscale: true
   biology:
     species:
-      - value: "Escherichia coli K-12"
-        source: "chemotaxis_master.py:23"
+      - value: "Escherichia coli K-12 MG1655"
+        iri: null
+        ontology_label: null
+        ontology: "ncbitaxon"
+        source: "chemotaxis_master.py:23; data/fasta filename"
         confidence: high
-        iri: null
-        ontology_label: null
-        ontology: NCBITaxon
-
-    biological_processes:
-      - value: chemotaxis
-        source: "README.md:2"
-        confidence: high
-        iri: null
-        ontology_label: null
-        ontology: GO
-      - value: "signal transduction"
-        source: "chemoreceptor_cluster.py:54-60"
-        confidence: inferred
-        iri: null
-        ontology_label: null
-        ontology: GO
-      - value: "flagellum-dependent cell motility"
-        source: "flagella_motor.py:1"
-        confidence: high
-        iri: null
-        ontology_label: null
-        ontology: GO
-      - value: "methylation-based sensory adaptation"
-        source: "chemoreceptor_cluster.py:54-60"
-        confidence: high
-        iri: null
-        ontology_label: null
-        ontology: GO
-
-    cell_types:
-      - value: "bacterial cell"
-        source: "README.md:2"
-        confidence: inferred
-        iri: null
-        ontology_label: null
-        ontology: CL
-
-    proteins_genes: []
-    # Deferred — see outputs/annotation.yaml provenance.partial_annotation_scope.deferred
-
   authors:
     - name: "Eran Agmon"
-      source: "setup.py:19"
+      affiliation: null
       orcid: null
-    - name: "Ryan Spangler"
+      role: "author"
       source: "setup.py:19"
-      orcid: null
-
-  contacts:
-    - name: "Eran Agmon"
-      email: "eagmon@stanford.edu"
-      source: "setup.py:20"
     - name: "Ryan Spangler"
-      email: "ryan.spangler@gmail.com"
-      source: "setup.py:20"
-
+      affiliation: null
+      orcid: null
+      role: "co-author"
+      source: "setup.py:19"
+  license:
+    spdx_id: "MIT"
+    source: "LICENSE:1"
+    confidence: high
   publications:
-    - doi: "10.3390/e22101101"
-      title: "A Multi-Scale Approach to Modeling E. coli Chemotaxis"
-      authors: "Agmon, E.; Spangler, R.K."
-      year: 2020
-      journal: Entropy
-      volume: "22(10):1101"
-      source: "setup.py:21"
-      confidence: high
+    - title: "A Multi-Scale Approach to Modeling E. coli Chemotaxis"
+      doi: "10.3390/e22101101"
+      pmid: null
+      url: "https://www.mdpi.com/1099-4300/22/10/1101"
+      source: "README.md:4-5"

@@ -1,395 +1,275 @@
 schema_version: "0.1"
 
-# =============================================================
-# ANNOTATION PASSES COMPLETED
-#   Pass 0 — Inventory                          2026-06-17
-#   Pass 1 — Model identity / biology           2026-06-17
-#   Pass 2 — Execution environment              2026-06-17
-#   Pass 3 — I/O                                DEFERRED
-#   Pass 4 — Ontology mapping                   DEFERRED
-# See provenance.partial_annotation_scope.deferred for details.
-# All iri: fields are null — Pass 4 (ols-ontology MCP) not executed.
-# =============================================================
-
 model:
   name:
     value: "vivarium-chemotaxis"
-    source: "README.md:1"
+    source: "setup.py:12 (name field); README.md:1"
     confidence: high
-
   short_description:
-    value: >-
-      A Python library modelling Escherichia coli chemotaxis across molecular and cellular
-      scales using the vivarium compositional simulation framework. Implements four composable
-      processes (ReceptorCluster, FlagellaMotor, MembranePotential, CoarseMotor) that together
-      reproduce the MeAsp attractant stimulus-response described in Agmon & Spangler (2020).
-    source: "README.md:2-4, setup.py:16-17"
+    value: "A multi-scale agent-based library for modeling E. coli chemotaxis, integrating chemoreceptor cluster signaling, flagella motor dynamics, and membrane potential within the Vivarium framework."
+    source: "README.md:3-5"
     confidence: high
-
+  long_description:
+    value: "A Python library implementing the multi-scale model of E. coli chemotaxis described in Agmon & Spangler (2020). Structured as composable Vivarium processes covering chemoreceptor cluster activity (MWC model of Tsr/Tar receptors), flagella motor switching, and membrane potential. The full master composite additionally integrates metabolism (FBA via iAF1260b), transcription, translation, complexation, and degradation. Individual processes and composites can run standalone or be assembled into multi-agent spatial experiments."
+    source: "README.md:3-18; chemotaxis_master.py:74-97"
+    confidence: high
   version:
     value: "0.0.2"
-    source: "setup.py:13"
+    source: "setup.py:12"
     confidence: high
-
   identifier:
-    scheme: github
-    id: "vivarium-collective/vivarium-chemotaxis"
+    scheme: "url"
+    value: "https://github.com/vivarium-collective/vivarium-chemotaxis"
     source: "setup.py:21"
-    confidence: high
-
-  license:
-    value: MIT
-    source: "LICENSE:1, setup.py:22"
-    confidence: high
-
   model_class:
-    - value: "multi-scale model"
-      source: "README.md:3"
-      confidence: high
-      notes: >-
-        README title names this "A Multi-Scale Approach"; composites span molecular
-        (receptor, CheY-P) and cellular (motor ensemble, metabolic) scales explicitly.
+    - value: "agent-based model"
       iri: null
       ontology_label: null
-      ontology: MAMO
-
+      ontology: "mamo"
+      source: "chemotaxis_flagella.py:22 (MetaDivision import); paper_experiments.py:31 (agent_environment_experiment import)"
+      confidence: high
+    - value: "constraint-based model"
+      iri: null
+      ontology_label: null
+      ontology: "mamo"
+      source: "chemotaxis_master.py:23-24 (Metabolism + get_iAF1260b_config import — FBA via iAF1260b metabolic reconstruction)"
+      confidence: high
   formalism:
     - value: "ordinary differential equation model"
-      source: "chemoreceptor_cluster.py:54-60"
-      confidence: high
-      notes: >-
-        MWC allosteric ODE model of receptor cluster activity and CheR/CheB methylation
-        kinetics. MembranePotential process uses GHK equations (membrane_potential.py:1-100).
       iri: null
       ontology_label: null
-      ontology: MAMO
+      ontology: "mamo"
+      source: "chemoreceptor_cluster.py:30-44 (run_step and run_to_steady_state integrate continuous state variables n_methyl and chemoreceptor_activity via fixed-timestep Euler updates)"
+      confidence: medium
     - value: "stochastic model"
-      source: "flagella_motor.py:44-46"
-      confidence: high
-      notes: >-
-        Per-flagellum CCW/CW rotational state transitions modelled stochastically (Sneddon
-        2012 veto model). CoarseMotor also uses discrete stochastic state switching
-        (coarse_motor.py:60-81).
       iri: null
       ontology_label: null
-      ontology: MAMO
-
-  determinism:
-    value: hybrid
-    source: "chemoreceptor_cluster.py:54-60, flagella_motor.py:44-46"
-    confidence: inferred
-    notes: >-
-      ODE subsystems (ReceptorCluster, MembranePotential) are deterministic; motor
-      subsystems (FlagellaMotor, CoarseMotor) are stochastic. Composition is hybrid.
-
-  time_dynamics:
-    value: continuous
-    source: "coarse_motor.py:49"
-    confidence: inferred
-    notes: "Fixed time_step=0.1 at coarse_motor.py:49; vivarium-core integrates forward continuously"
-
-  spatial:
-    value: non-spatial
-    source: "README.md"
-    confidence: inferred
-    notes: "No spatial coordinates, grids, or PDEs observed in any process file. Cells modelled as well-mixed compartments."
-
-  multiscale:
-    value: true
-    source: "README.md:3"
-    confidence: high
-
+      ontology: "mamo"
+      source: "flagella_motor.py:43-46 (FlagellaMotor docstring: stochastic model of motor switching based on Sneddon 2012)"
+      confidence: high
+  determinism: hybrid
+  time_dynamics: discrete
+  spatial: non-spatial
+  multiscale: true
   model_scales:
-    - value: molecular
-      source: "chemoreceptor_cluster.py:26, flagella_motor.py:50-52"
-      confidence: inferred
-      notes: >-
-        Molecular-scale state variables: receptor methylation level (n_methyl),
-        phosphorylated CheY (CheY_P in M), proton-motive force (PMF in mV)
-    - value: cellular
-      source: "chemotaxis_master.py:23"
-      confidence: inferred
-      notes: >-
-        Cellular-scale: flagellar motor ensemble bias, whole-cell metabolic model
-        iAF1260b imported at chemotaxis_master.py:23
-
+    - value: "molecular"
+      source: "chemoreceptor_cluster.py:49-60 (MWC receptor cluster: Tsr/Tar methylation state at molecular level)"
+      confidence: high
+    - value: "cellular"
+      source: "chemotaxis_master.py:115-135 (generates processes for metabolism, transcription, translation, flagella motor, PMF — all intracellular)"
+      confidence: high
+    - value: "individual"
+      source: "paper_experiments.py:31 (agent_environment_experiment — each E. coli cell is an agent navigating an environment)"
+      confidence: high
   biology:
     species:
-      - value: "Escherichia coli K-12"
-        source: "chemotaxis_master.py:23"
-        confidence: high
-        notes: >-
-          iAF1260b genome-scale metabolic model is explicitly E. coli K-12.
-          FASTA file at chemotaxis/data/fasta/ references K-12 MG1655 strain.
-          README names E. coli throughout.
+      - value: "Escherichia coli K-12 MG1655"
         iri: null
         ontology_label: null
-        ontology: NCBITaxon
-
+        ontology: "ncbitaxon"
+        source: "chemotaxis_master.py:23 (iAF1260b is the K-12 MG1655 metabolic reconstruction); chemotaxis/data/fasta/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.chromosome.Chromosome.fa (filename)"
+        confidence: high
+    cell_types: []
+    anatomy: []
     biological_processes:
-      - value: chemotaxis
-        source: "README.md:2"
-        confidence: high
+      - value: "chemotaxis"
         iri: null
         ontology_label: null
-        ontology: GO
+        ontology: "go"
+        source: "README.md:1"
+        confidence: high
       - value: "signal transduction"
-        source: "chemoreceptor_cluster.py:54-60"
-        confidence: inferred
-        notes: >-
-          CheA kinase cascade (k_y, k_z parameters at flagella_motor.py:57-58)
-          transduces receptor activity to CheY phosphorylation
         iri: null
         ontology_label: null
-        ontology: GO
-      - value: "flagellum-dependent cell motility"
-        source: "flagella_motor.py:1"
+        ontology: "go"
+        source: "chemoreceptor_cluster.py:49-60 (ReceptorCluster class models the CheA-CheY signal transduction cascade)"
         confidence: high
+    molecular_entities:
+      - value: "methyl-aspartate"
         iri: null
         ontology_label: null
-        ontology: GO
-      - value: "methylation-based sensory adaptation"
-        source: "chemoreceptor_cluster.py:54-60"
+        ontology: "chebi"
+        source: "chemoreceptor_cluster.py:26 (DEFAULT_LIGAND = 'MeAsp')"
         confidence: high
-        notes: >-
-          CheR methyltransferase and CheB methylesterase modelled explicitly;
-          default parameters CheR=0.00016, CheB=0.00028 at
-          chemoreceptor_cluster.py:103-104
-        iri: null
-        ontology_label: null
-        ontology: GO
-
-    cell_types:
-      - value: "bacterial cell"
-        source: "README.md:2"
-        confidence: inferred
-        iri: null
-        ontology_label: null
-        ontology: CL
-
-    proteins_genes: []
-    # Proteins CheA, CheB, CheR, CheY, Tar, Tsr referenced by name in process
-    # files but UniProt accession lookup requires Pass 4 (ols-ontology / UniProt
-    # external query) which was not performed. Block intentionally empty.
-    # See provenance.partial_annotation_scope.deferred.
-
+    proteins_genes:
+      - value: "Tsr (methyl-accepting chemotaxis serine receptor)"
+        identifier:
+          scheme: null
+          value: null
+        source: "chemoreceptor_cluster.py:53"
+        confidence: high
+      - value: "Tar (methyl-accepting chemotaxis aspartate receptor)"
+        identifier:
+          scheme: null
+          value: null
+        source: "chemoreceptor_cluster.py:53"
+        confidence: high
+      - value: "CheY (chemotaxis response regulator)"
+        identifier:
+          scheme: null
+          value: null
+        source: "flagella_motor.py:88 (CheY: 2.59 initial concentration in uM)"
+        confidence: high
+      - value: "CheA (chemotaxis histidine kinase)"
+        identifier:
+          scheme: null
+          value: null
+        source: "coarse_motor.py:75 (CheA: 0.01*100 uM initial)"
+        confidence: high
+      - value: "CheB (chemotaxis methylesterase)"
+        identifier:
+          scheme: null
+          value: null
+        source: "chemoreceptor_cluster.py:102 (CheB: 0.00028 default rate)"
+        confidence: high
+      - value: "CheR (chemotaxis methyltransferase)"
+        identifier:
+          scheme: null
+          value: null
+        source: "chemoreceptor_cluster.py:101 (CheR: 0.00016 default rate)"
+        confidence: high
   authors:
     - name: "Eran Agmon"
-      source: "setup.py:19"
+      affiliation: null
       orcid: null
+      role: "author"
+      source: "setup.py:19"
     - name: "Ryan Spangler"
-      source: "setup.py:19"
+      affiliation: null
       orcid: null
-
+      role: "co-author"
+      source: "setup.py:19"
   contacts:
     - name: "Eran Agmon"
+      role: "corresponding author"
       email: "eagmon@stanford.edu"
+      affiliation: null
       source: "setup.py:20"
     - name: "Ryan Spangler"
+      role: "maintainer"
       email: "ryan.spangler@gmail.com"
+      affiliation: null
       source: "setup.py:20"
-
+  license:
+    spdx_id: "MIT"
+    source: "LICENSE:1"
+    confidence: high
   publications:
-    - doi: "10.3390/e22101101"
-      title: "A Multi-Scale Approach to Modeling E. coli Chemotaxis"
-      authors: "Agmon, E.; Spangler, R.K."
-      year: 2020
-      journal: Entropy
-      volume: "22(10):1101"
-      source: "setup.py:21"
-      confidence: high
-
-# -------------------------------------------------------------------
-# SECTION B — EXECUTION ENVIRONMENT
-# -------------------------------------------------------------------
+    - title: "A Multi-Scale Approach to Modeling E. coli Chemotaxis"
+      doi: "10.3390/e22101101"
+      pmid: null
+      url: "https://www.mdpi.com/1099-4300/22/10/1101"
+      source: "README.md:4-5"
+  related_resources: []
 
 execution:
-  status:
-    value: characterized
-    source: "README.md:49-72, pytest.ini:1-6"
-    confidence: high
-    notes: "Entry points documented in README; test framework documented in pytest.ini"
-
+  status: "characterized"
   language:
-    name: Python
-    source: "README.md:29"
-    confidence: high
+    name: "Python"
+    version_constraint: ">=3"
     iri: null
-    ontology_label: null
-    ontology: SWO
-
+    ontology: "swo"
+    source: "README.md:30 ('Make a python environment with Python 3'); setup.py:1-4 (Python imports)"
   environment_kind:
-    value: pip
-    source: "requirements.txt:1, README.md:37"
-    confidence: high
-    notes: >-
-      requirements.txt contains only '-e .' (editable install); all versioned
-      dependencies declared in setup.py install_requires
-
-  python_version:
-    value: null
-    source: "setup.py"
-    confidence: none
-    notes: >-
-      python_requires not set in setup.py. vivarium-core==0.0.34 is a 2020-era
-      pinned release; Python <3.10 likely required. Not determinable without
-      running the package.
-
+    value: "pip"
+    source: "requirements.txt:1 (-e .); README.md:38 (pip install -r requirements.txt)"
   dependencies:
     runtime:
-      - name: vivarium-cell
-        version: "==0.0.23"
-        source: "setup.py:27"
-        confidence: high
-      - name: vivarium-core
-        version: "==0.0.34"
+      - name: "vivarium-cell"
+        version_constraint: "==0.0.23"
         source: "setup.py:28"
-        confidence: high
-      - name: pymunk
-        version: "==5.6.0"
+      - name: "vivarium-core"
+        version_constraint: "==0.0.34"
         source: "setup.py:29"
-        confidence: high
-      - name: numpy
-        version: null
+      - name: "pymunk"
+        version_constraint: "==5.6.0"
         source: "setup.py:30"
-        confidence: high
-        notes: "Listed without version pin in install_requires"
-    dev:
-      - name: pytest
-        source: "pytest.ini:1"
-        confidence: high
-
+      - name: "numpy"
+        version_constraint: null
+        source: "README.md:32-35 (manual pre-install step: 'First install numpy'; absent from setup.py install_requires)"
+    optional:
+      - name: "MongoDB"
+        version_constraint: null
+        group: "large-experiments"
+        source: "README.md:42-45 ('MongoDB is required for some of the larger experiments')"
+    system: []
+  containers: []
+  compute:
+    cpu_cores:
+      value: null
+      source: "not found in sources"
+      confidence: none
+    memory_gb:
+      value: null
+      source: "not found in sources"
+      confidence: none
+    gpu_required:
+      value: false
+      source: "README.md (no GPU mentioned anywhere)"
+      confidence: medium
+    parallelism: "single"
+    typical_runtime:
+      value: null
+      unit: null
+      source: "not found in sources"
+      confidence: none
   entry_points:
-    - id: run_chemoreceptor_cluster
-      description: "Run ReceptorCluster process standalone (MWC receptor ODE)"
-      command: "python chemotaxis/processes/chemoreptor_cluster.py"
-      source: "README.md:49-50"
-      confidence: high
-      notes: >-
-        Command copied verbatim from README.md:49-50. 'chemoreptor' is a typo in
-        the README (correct filename is chemoreceptor_cluster.py). Preserved
-        verbatim per SKILL.md invariant: commands must be verbatim from source.
-    - id: run_flagella_motor
-      description: "Run FlagellaMotor process standalone (stochastic motor)"
-      command: "python chemotaxis/processes/flagella_motor.py"
-      source: "README.md:55"
-      confidence: high
-    - id: run_chemotaxis_minimal
-      description: "Run ChemotaxisMinimal composite (ReceptorCluster + CoarseMotor)"
-      command: "python chemotaxis/composites/chemotaxis_minimal.py"
-      source: "README.md:63"
-      confidence: high
-      notes: "Primary annotation scope; output written to out/composites/"
-    - id: run_tests
-      description: "Run pytest with doctest-modules across chemotaxis/ package"
-      command: "pytest --doctest-modules"
-      source: "pytest.ini:3"
-      confidence: high
-      notes: "testpaths=chemotaxis (pytest.ini:5); slow marker defined (pytest.ini:6)"
-
-  test_framework:
-    value: pytest
-    source: "pytest.ini:1"
-    confidence: high
-    notes: "addopts: --doctest-modules --strict-markers (pytest.ini:3)"
-
-# -------------------------------------------------------------------
-# SECTION C — I/O
-# -------------------------------------------------------------------
+    - command: "python chemotaxis/processes/chemoreptor_cluster.py"
+      purpose: "Run the chemoreceptor cluster process standalone (note: command contains typo 'chemoreptor' verbatim from README)"
+      arguments: []
+      source: "README.md:51"
+    - command: "python chemotaxis/composites/chemotaxis_flagella.py"
+      purpose: "Run the chemotaxis flagella composite standalone"
+      arguments: []
+      source: "README.md:56"
+    - command: "python chemotaxis/experiments/paper_experiments.py 7b"
+      purpose: "Run paper experiments by figure number (available: 3b, 5a-5d, 6a-6c, 7a-7d)"
+      arguments:
+        - name: "figure_number"
+          description: "Figure number from the paper (positional argument)"
+          default: null
+      source: "README.md:63; paper_experiments.py:10-11"
+  tests:
+    framework: "pytest"
+    invocation: "pytest"
+    source: "README.md:69; pytest.ini:1-6"
+  notes: "README.md:51 contains a typo: 'chemoreptor_cluster.py' (one 'e' missing); the correct filename is 'chemoreceptor_cluster.py'. The command is preserved verbatim as written. numpy is a practical runtime requirement imported across multiple process files but is absent from setup.py install_requires; README instructs manual installation before -r requirements.txt."
 
 io: {}
-# Pass 3 (I/O annotation) was not executed in this session.
-# See provenance.partial_annotation_scope.deferred.
-
-# -------------------------------------------------------------------
-# PROVENANCE
-# -------------------------------------------------------------------
 
 provenance:
-  annotated_at: "2026-06-17T00:00:00Z"
-  annotated_by: "biomodel-annotator/0.1"
-  schema_version: "0.1"
-  human_review_required: true
-
-  passes_completed:
-    - pass: 0
-      name: Inventory
-      status: complete
-      completed_at: "2026-06-17"
-      notes: >-
-        53 files enumerated (excluding .git, __pycache__). Key files confirmed:
-        README.md, setup.py, requirements.txt, pytest.ini, LICENSE, doc/references.bib.
-        Also found: chemotaxis/data/fasta/ containing E. coli K-12 MG1655 FASTA.
-        Not present: CITATION.cff, pyproject.toml, Dockerfile, *.sbml.
-    - pass: 1
-      name: "Model identity / biology (Section A)"
-      status: complete
-      completed_at: "2026-06-17"
-      files_read:
-        - "README.md (full)"
-        - "setup.py (full, 31 lines)"
-        - "LICENSE (full)"
-        - "chemotaxis/processes/chemoreceptor_cluster.py (lines 1-139)"
-        - "chemotaxis/processes/flagella_motor.py (lines 1-110)"
-        - "chemotaxis/processes/coarse_motor.py (lines 1-100)"
-        - "chemotaxis/processes/membrane_potential.py (lines 1-100)"
-        - "chemotaxis/composites/chemotaxis_master.py (lines 1-100)"
-    - pass: 2
-      name: "Execution environment (Section B)"
-      status: complete
-      completed_at: "2026-06-17"
-      files_read:
-        - "setup.py (reused from Pass 1)"
-        - "requirements.txt (full, 1 line)"
-        - "pytest.ini (full, 6 lines)"
-        - "chemotaxis/composites/chemotaxis_minimal.py (lines 1-90)"
-
-  partial_annotation_scope:
-    deferred:
-      - section: "Section C (io)"
-        reason: >-
-          Pass 3 (I/O annotation) was not executed in this session. Reading
-          budget was allocated to Passes 0-2 only per the agreed annotation
-          scope. io.inputs and io.outputs require reading entry-point files
-          and 2-3 directly-imported modules in detail.
-        affects:
-          - io.inputs
-          - io.outputs
-      - section: "Ontology mapping (all iri: fields)"
-        reason: >-
-          Pass 4 requires the ols-ontology MCP server (EBI OLS). The server
-          was not connected in this session. All iri: fields are null. This
-          is an unattempted state — not a failed lookup. mapping_confidence
-          fields are therefore omitted from Section A and B; they belong to
-          Pass 4 output.
-        affects:
-          - "model.model_class[*].iri"
-          - "model.formalism[*].iri"
-          - "model.biology.species[*].iri"
-          - "model.biology.biological_processes[*].iri"
-          - "model.biology.cell_types[*].iri"
-          - "model.biology.proteins_genes (entire block)"
-          - "execution.language.iri"
-      - section: "UniProt accessions (proteins_genes)"
-        reason: >-
-          CheA, CheB, CheR, CheY, Tar, Tsr are referenced by name in process
-          source files. Accession lookup requires an external UniProt query
-          (Pass 4 scope) which was not performed. Block left empty.
-        affects:
-          - model.biology.proteins_genes
-
+  annotated_at: "2026-06-18T00:00:00Z"
+  annotated_by: "biomodel-annotator/0.1 (SKILL.md Passes 0-2) via Claude (claude-sonnet-4-6)"
+  source_root: "C:\\Users\\powen\\PycharmProjects\\MISM\\vivarium-chemotaxis"
+  files_inspected:
+    - "README.md"
+    - "LICENSE"
+    - "setup.py"
+    - "requirements.txt"
+    - "pytest.ini"
+    - "chemotaxis/processes/chemoreceptor_cluster.py (lines 1-120)"
+    - "chemotaxis/processes/flagella_motor.py (lines 1-100)"
+    - "chemotaxis/processes/coarse_motor.py (lines 1-90)"
+    - "chemotaxis/processes/membrane_potential.py (lines 1-80)"
+    - "chemotaxis/composites/chemotaxis_master.py (full)"
+    - "chemotaxis/composites/chemotaxis_flagella.py (lines 1-50)"
+    - "chemotaxis/experiments/paper_experiments.py (lines 1-40)"
+  ontology_lookups:
+    service: "EBI OLS via ols-ontology MCP"
+    embedding_models_available: null
+    embedding_fallback_used: false
   unmapped_fields: []
-  # Empty because Pass 4 (ontology mapping) was not attempted.
-  # Fields requiring ontology lookup are documented in
-  # partial_annotation_scope.deferred above, not here.
-
-  needs_review:
-    - field: "model.biology.proteins_genes"
-      note: >-
-        CheA, CheB, CheR, CheY, Tar, Tsr explicitly referenced in process
-        source files but UniProt accessions were not looked up in this session.
-    - field: "execution.python_version"
-      note: >-
-        No python_requires in setup.py. vivarium-core==0.0.34 vintage (2020)
-        suggests Python <3.10 may be required; verify before attempting
-        reproduction.
+  partial_annotation_scope:
+    in_scope:
+      - "Pass 0: inventory (all top-level files enumerated)"
+      - "Pass 1: model identity and biology (Section A)"
+      - "Pass 2: execution environment (Section B)"
+    deferred:
+      - scope: "Section C (Pass 3 — Inputs and Outputs)"
+        reason: "Pass 3 not executed in this session per user instruction; reading budget reserved"
+      - scope: "All iri: fields and mapping_confidence values (Pass 4 — Ontology Mapping)"
+        reason: "ols-ontology MCP not connected; no OLS queries attempted"
+      - scope: "model.biology.proteins_genes — identifier fields (UniProt lookup)"
+        reason: "UniProt lookup requires Pass 4 (ols-ontology MCP); deferred with Pass 4"
+  human_review_required: true
+  notes: "Passes 0-2 completed following SKILL.md. Pass 3 (I/O) and Pass 4 (ontology mapping) deferred. All iri: fields are null because Pass 4 was not executed — per SKILL.md reproducibility invariant, deferred fields omit mapping_confidence entirely rather than setting it to none. The iAF1260b model identifier (chemotaxis_master.py:23) was used to confirm E. coli K-12 MG1655 as the organism; this reconstruction is genome-scale and strain-specific."

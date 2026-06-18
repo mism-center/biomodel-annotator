@@ -1,91 +1,78 @@
-# Section B — Execution Environment  |  Section C — I/O
-# Extracted from outputs/annotation.yaml (schema_version: "0.1")
-# Pass 2 (Execution) complete. Pass 3 (I/O) deferred — io: block is empty.
-# All iri: fields are null (Pass 4 / ols-ontology MCP not connected).
+# Section B + C extract — execution environment and I/O
+# Derived from outputs/annotation.yaml (execution: and io: blocks)
+schema_version: "0.1"
 
 execution:
-  status:
-    value: characterized
-    source: "README.md:49-72, pytest.ini:1-6"
-    confidence: high
-
+  status: "characterized"
   language:
-    name: Python
-    source: "README.md:29"
-    confidence: high
+    name: "Python"
+    version_constraint: ">=3"
     iri: null
-    ontology_label: null
-    ontology: SWO
-
+    ontology: "swo"
+    source: "README.md:30; setup.py:1-4"
   environment_kind:
-    value: pip
-    source: "requirements.txt:1, README.md:37"
-    confidence: high
-
-  python_version:
-    value: null
-    source: "setup.py"
-    confidence: none
-    notes: >-
-      python_requires not set in setup.py. vivarium-core==0.0.34 vintage (2020)
-      suggests Python <3.10 likely required.
-
+    value: "pip"
+    source: "requirements.txt:1; README.md:38"
   dependencies:
     runtime:
-      - name: vivarium-cell
-        version: "==0.0.23"
-        source: "setup.py:27"
-        confidence: high
-      - name: vivarium-core
-        version: "==0.0.34"
+      - name: "vivarium-cell"
+        version_constraint: "==0.0.23"
         source: "setup.py:28"
-        confidence: high
-      - name: pymunk
-        version: "==5.6.0"
+      - name: "vivarium-core"
+        version_constraint: "==0.0.34"
         source: "setup.py:29"
-        confidence: high
-      - name: numpy
-        version: null
+      - name: "pymunk"
+        version_constraint: "==5.6.0"
         source: "setup.py:30"
-        confidence: high
-        notes: "No version pin in install_requires"
-    dev:
-      - name: pytest
-        source: "pytest.ini:1"
-        confidence: high
-
+      - name: "numpy"
+        version_constraint: null
+        source: "README.md:32-35 (manual pre-install; absent from setup.py install_requires)"
+    optional:
+      - name: "MongoDB"
+        version_constraint: null
+        group: "large-experiments"
+        source: "README.md:42-45"
+    system: []
+  containers: []
+  compute:
+    cpu_cores:
+      value: null
+      source: "not found in sources"
+      confidence: none
+    memory_gb:
+      value: null
+      source: "not found in sources"
+      confidence: none
+    gpu_required:
+      value: false
+      source: "README.md (no GPU mentioned)"
+      confidence: medium
+    parallelism: "single"
+    typical_runtime:
+      value: null
+      unit: null
+      source: "not found in sources"
+      confidence: none
   entry_points:
-    - id: run_chemoreceptor_cluster
-      description: "Run ReceptorCluster process standalone (MWC receptor ODE)"
-      command: "python chemotaxis/processes/chemoreptor_cluster.py"
-      source: "README.md:49-50"
-      confidence: high
-      notes: >-
-        'chemoreptor' is a typo in README.md:49-50. Preserved verbatim per SKILL.md.
-        Correct filename: chemoreceptor_cluster.py
-    - id: run_flagella_motor
-      description: "Run FlagellaMotor process standalone (stochastic motor)"
-      command: "python chemotaxis/processes/flagella_motor.py"
-      source: "README.md:55"
-      confidence: high
-    - id: run_chemotaxis_minimal
-      description: "Run ChemotaxisMinimal composite (ReceptorCluster + CoarseMotor)"
-      command: "python chemotaxis/composites/chemotaxis_minimal.py"
-      source: "README.md:63"
-      confidence: high
-    - id: run_tests
-      description: "Run pytest with doctest-modules across chemotaxis/ package"
-      command: "pytest --doctest-modules"
-      source: "pytest.ini:3"
-      confidence: high
-
-  test_framework:
-    value: pytest
-    source: "pytest.ini:1"
-    confidence: high
-    notes: "addopts: --doctest-modules --strict-markers (pytest.ini:3)"
-
+    - command: "python chemotaxis/processes/chemoreptor_cluster.py"
+      purpose: "Run the chemoreceptor cluster process standalone (typo 'chemoreptor' verbatim from README)"
+      arguments: []
+      source: "README.md:51"
+    - command: "python chemotaxis/composites/chemotaxis_flagella.py"
+      purpose: "Run the chemotaxis flagella composite standalone"
+      arguments: []
+      source: "README.md:56"
+    - command: "python chemotaxis/experiments/paper_experiments.py 7b"
+      purpose: "Run paper experiments by figure number (available: 3b, 5a-5d, 6a-6c, 7a-7d)"
+      arguments:
+        - name: "figure_number"
+          description: "Figure number from the paper (positional argument)"
+          default: null
+      source: "README.md:63; paper_experiments.py:10-11"
+  tests:
+    framework: "pytest"
+    invocation: "pytest"
+    source: "README.md:69; pytest.ini:1-6"
+  notes: "README.md:51 typo 'chemoreptor_cluster.py' (correct: 'chemoreceptor_cluster.py') preserved verbatim. numpy absent from setup.py install_requires; README instructs manual installation."
 
 io: {}
-# Pass 3 (I/O annotation) deferred.
-# See outputs/annotation.yaml provenance.partial_annotation_scope.deferred.
