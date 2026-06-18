@@ -1,0 +1,91 @@
+# Section B — Execution Environment  |  Section C — I/O
+# Extracted from outputs/annotation.yaml (schema_version: "0.1")
+# Pass 2 (Execution) complete. Pass 3 (I/O) deferred — io: block is empty.
+# All iri: fields are null (Pass 4 / ols-ontology MCP not connected).
+
+execution:
+  status:
+    value: characterized
+    source: "README.md:49-72, pytest.ini:1-6"
+    confidence: high
+
+  language:
+    name: Python
+    source: "README.md:29"
+    confidence: high
+    iri: null
+    ontology_label: null
+    ontology: SWO
+
+  environment_kind:
+    value: pip
+    source: "requirements.txt:1, README.md:37"
+    confidence: high
+
+  python_version:
+    value: null
+    source: "setup.py"
+    confidence: none
+    notes: >-
+      python_requires not set in setup.py. vivarium-core==0.0.34 vintage (2020)
+      suggests Python <3.10 likely required.
+
+  dependencies:
+    runtime:
+      - name: vivarium-cell
+        version: "==0.0.23"
+        source: "setup.py:27"
+        confidence: high
+      - name: vivarium-core
+        version: "==0.0.34"
+        source: "setup.py:28"
+        confidence: high
+      - name: pymunk
+        version: "==5.6.0"
+        source: "setup.py:29"
+        confidence: high
+      - name: numpy
+        version: null
+        source: "setup.py:30"
+        confidence: high
+        notes: "No version pin in install_requires"
+    dev:
+      - name: pytest
+        source: "pytest.ini:1"
+        confidence: high
+
+  entry_points:
+    - id: run_chemoreceptor_cluster
+      description: "Run ReceptorCluster process standalone (MWC receptor ODE)"
+      command: "python chemotaxis/processes/chemoreptor_cluster.py"
+      source: "README.md:49-50"
+      confidence: high
+      notes: >-
+        'chemoreptor' is a typo in README.md:49-50. Preserved verbatim per SKILL.md.
+        Correct filename: chemoreceptor_cluster.py
+    - id: run_flagella_motor
+      description: "Run FlagellaMotor process standalone (stochastic motor)"
+      command: "python chemotaxis/processes/flagella_motor.py"
+      source: "README.md:55"
+      confidence: high
+    - id: run_chemotaxis_minimal
+      description: "Run ChemotaxisMinimal composite (ReceptorCluster + CoarseMotor)"
+      command: "python chemotaxis/composites/chemotaxis_minimal.py"
+      source: "README.md:63"
+      confidence: high
+    - id: run_tests
+      description: "Run pytest with doctest-modules across chemotaxis/ package"
+      command: "pytest --doctest-modules"
+      source: "pytest.ini:3"
+      confidence: high
+
+  test_framework:
+    value: pytest
+    source: "pytest.ini:1"
+    confidence: high
+    notes: "addopts: --doctest-modules --strict-markers (pytest.ini:3)"
+
+
+io: {}
+# Pass 3 (I/O annotation) deferred.
+# See outputs/annotation.yaml provenance.partial_annotation_scope.deferred.

@@ -142,6 +142,28 @@ To consume a specific version, download the corresponding asset from the Release
 
 ---
 
+## Development
+
+`src/validator.py` is a post-hoc validation utility for the annotation YAML the skill produces. It is **not** part of the installed skill and is excluded from release zips.
+
+```python
+from pathlib import Path
+from src.validator import Validator
+
+v = Validator(input_path=Path("/path/to/model-repo"))
+report = v.validate(
+    annotation_yaml=open("mymodel.annotation.yaml").read(),
+    metadata_yaml="",   # legacy; pass empty string when using annotation_yaml
+    execution_yaml="",
+)
+print(report["overall_status"])  # "pass" or "fail"
+print(report["structural_validation"])
+```
+
+Exit code rules and warning thresholds are documented in the module docstring.
+
+---
+
 ## License
 
 See [`LICENSE`](LICENSE).
