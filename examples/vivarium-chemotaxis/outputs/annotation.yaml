@@ -15,7 +15,7 @@ model:
     confidence: high
   version:
     value: "0.0.2"
-    source: "setup.py:12"
+    source: "setup.py:13"
     confidence: high
   identifier:
     scheme: "url"
@@ -108,7 +108,7 @@ model:
         identifier:
           scheme: null
           value: null
-        source: "flagella_motor.py:88 (CheY: 2.59 initial concentration in uM)"
+        source: "flagella_motor.py:84 (CheY: 2.59 initial concentration in uM)"
         confidence: high
       - value: "CheA (chemotaxis histidine kinase)"
         identifier:
@@ -120,13 +120,13 @@ model:
         identifier:
           scheme: null
           value: null
-        source: "chemoreceptor_cluster.py:102 (CheB: 0.00028 default rate)"
+        source: "chemoreceptor_cluster.py:104 (CheB: 0.00028 default rate)"
         confidence: high
       - value: "CheR (chemotaxis methyltransferase)"
         identifier:
           scheme: null
           value: null
-        source: "chemoreceptor_cluster.py:101 (CheR: 0.00016 default rate)"
+        source: "chemoreceptor_cluster.py:103 (CheR: 0.00016 default rate)"
         confidence: high
   authors:
     - name: "Eran Agmon"
@@ -233,12 +233,12 @@ execution:
     framework: "pytest"
     invocation: "pytest"
     source: "README.md:69; pytest.ini:1-6"
-  notes: "README.md:51 contains a typo: 'chemoreptor_cluster.py' (one 'e' missing); the correct filename is 'chemoreceptor_cluster.py'. The command is preserved verbatim as written. numpy is a practical runtime requirement imported across multiple process files but is absent from setup.py install_requires; README instructs manual installation before -r requirements.txt."
+  notes: "README.md:51 contains a typo: 'chemoreptor_cluster.py' (one 'e' missing); the correct filename is 'chemoreceptor_cluster.py'. The command is preserved verbatim as written. numpy is a practical runtime requirement imported across multiple process files but is absent from setup.py install_requires; README instructs manual installation before -r requirements.txt. pytest.ini addopts: --doctest-modules --strict-markers (--strict-markers present in 2026-06-19 read; confirms strict marker enforcement)."
 
 io: {}
 
 provenance:
-  annotated_at: "2026-06-18T00:00:00Z"
+  annotated_at: "2026-06-19T00:00:00Z"
   annotated_by: "biomodel-annotator/0.1 (SKILL.md Passes 0-2) via Claude (claude-sonnet-4-6)"
   source_root: "C:\\Users\\powen\\PycharmProjects\\MISM\\vivarium-chemotaxis"
   files_inspected:
@@ -272,4 +272,4 @@ provenance:
       - scope: "model.biology.proteins_genes — identifier fields (UniProt lookup)"
         reason: "UniProt lookup requires Pass 4 (ols-ontology MCP); deferred with Pass 4"
   human_review_required: true
-  notes: "Passes 0-2 completed following SKILL.md. Pass 3 (I/O) and Pass 4 (ontology mapping) deferred. All iri: fields are null because Pass 4 was not executed — per SKILL.md reproducibility invariant, deferred fields omit mapping_confidence entirely rather than setting it to none. The iAF1260b model identifier (chemotaxis_master.py:23) was used to confirm E. coli K-12 MG1655 as the organism; this reconstruction is genome-scale and strain-specific."
+  notes: "Passes 0-2 completed following SKILL.md (Phase 7 rerun, 2026-06-19). Source files unchanged from Phase 6 (2026-06-18). Pass 3 (I/O) and Pass 4 (ontology mapping) deferred per user instruction. All iri: fields are null because Pass 4 was not executed — per SKILL.md reproducibility invariant, deferred fields omit mapping_confidence entirely rather than setting it to none. The iAF1260b model identifier (chemotaxis_master.py:23) was used to confirm E. coli K-12 MG1655 as the organism; this reconstruction is genome-scale and strain-specific. New finding (2026-06-19): src/validator.py now has a __main__ CLI block (structural-only) — updates Phase 4 finding in ANNOTATOR_LOG.md."

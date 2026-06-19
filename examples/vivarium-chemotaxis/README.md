@@ -5,8 +5,8 @@
 **Model class:** agent-based model; constraint-based model  
 **Formalism:** ODE (receptor cluster); stochastic (flagella motor)  
 **SKILL.md passes completed:** 0, 1, 2 (Passes 3, 4 deferred)  
-**Annotation date:** 2026-06-18  
-**Validation:** EXIT 0 (2026-06-18T20:04:22Z)
+**Annotation date:** 2026-06-19 (Phase 7 rerun)  
+**Validation:** EXIT 0 (2026-06-19T12:00:50Z)
 
 ---
 
@@ -19,7 +19,6 @@ vivarium-chemotaxis/
   README.md              — this file
   outputs/
     annotation.yaml      — master annotation artifact (Passes 0–2)
-    sample_timeseries.json  — representative MeAsp stimulus-response timeseries
     validation_report.txt   — real validator output, EXIT 0
   references/
     source_links.md      — files read with line numbers; ontology status table

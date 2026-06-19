@@ -19,7 +19,7 @@ model:
     confidence: high
   version:
     value: "0.0.2"
-    source: "setup.py:12"
+    source: "setup.py:13"
     confidence: high
   identifier:
     scheme: "url"
