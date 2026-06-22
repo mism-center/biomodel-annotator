@@ -4,7 +4,7 @@ A narrative record of how the `biomodel-annotator` examples were built, what wen
 what was corrected, and what was learned. This file is the sole README in this directory;
 it covers both the session narrative and the technical specification for the examples.
 
-**Dates:** 2026-06-17 (Sessions 1–3), 2026-06-18 (Session 4 — fresh rerun), 2026-06-19 (Session 5 — Phase 7 rerun; Session 6 — Kermack-McKendrick 1927)  
+**Dates:** 2026-06-17 (Sessions 1–3), 2026-06-18 (Session 4 — fresh rerun), 2026-06-19 (Session 5 — Phase 7 rerun; Session 6 — Kermack-McKendrick 1927), 2026-06-22 (Phase 9 — vivarium-chemotaxis rerun; Phase 10 — Kermack-McKendrick rerun)  
 **Tool:** `biomodel-annotator/0.1` (SKILL.md + CLAUDE.md)  
 **Environment:** Claude Code (claude-sonnet-4-6), Windows 11, project venv at
 `C:\Users\powen\PycharmProjects\MISM\.venv`
@@ -15,8 +15,8 @@ it covers both the session narrative and the technical specification for the exa
 
 | Directory | Model | Organism | Formalism | SKILL.md passes completed |
 |---|---|---|---|---|
-| `vivarium-chemotaxis/` | vivarium-chemotaxis Multi-Scale E. coli Chemotaxis | *E. coli* K-12 | ODE + Stochastic | 0, 1, 2 (Passes 3, 4 deferred) — Phase 7 rerun 2026-06-19 |
-| `kermack-mckendrick-1927/` | Kermack-McKendrick SIR Epidemic Model (1927 paper) | N/A — organism-agnostic | ODE (compartmental) | 0, 1, 2 (Passes 3, 4 deferred) — 2026-06-19 |
+| `vivarium-chemotaxis/` | vivarium-chemotaxis Multi-Scale E. coli Chemotaxis | *E. coli* K-12 | ODE + Stochastic | 0, 1, 2 (Passes 3, 4 deferred) — Phase 9 rerun 2026-06-22 |
+| `kermack-mckendrick-1927/` | Kermack-McKendrick SIR Epidemic Model (1927 paper) | N/A — organism-agnostic | ODE (compartmental) | 0, 1, 2 (Passes 3, 4 deferred) — Phase 10 rerun 2026-06-22 |
 
 ---
 
@@ -469,3 +469,104 @@ Notable validator findings:
 - `undocumented_dependencies: []` ✓ (no setup.py in artifact directory; deps not checked)
 - `io_slots_constructed: 0` warning (expected; `io: {}` empty stub)
 - `register_model_constructable: true` ✓ (ExecutionType.other accepted by mism_registry)
+
+---
+
+## Phase 9 — Rerun following SKILL.md (2026-06-22)
+
+At user request: run the Biological Computational Model Annotator workflow for
+vivarium-chemotaxis; perform Sections A & B validations; do not proceed to Pass 3.
+
+**Passes executed:** 0, 1, 2 (SKILL.md workflow followed in order).
+
+**Source files read:** same 11 files as Phase 7, plus paper_experiments.py read to line 50
+(vs line 40 in Phase 7 — extended to capture the full import block).
+
+**Changes observed vs Phase 7:**
+
+| Item | Phase 7 | Phase 9 |
+|---|---|---|
+| `chemotaxis_flagella.py` MetaDivision line | `:22` | `:21` (re-verified from fresh Read output) |
+| `chemotaxis_master.py` Metabolism + iAF1260b | `:23-24` | `:22-23` (re-verified from fresh Read output) |
+| `chemotaxis_master.py` cellular scale range | `:115-135` | `:111-135` (generate_processes def starts at line 111) |
+| `model.biology.species[0]` Metabolism source | `:23` | `:22` (Metabolism import is line 22; iAF1260b import is line 23) |
+| Annotation decisions | — | unchanged |
+| Validation timestamp | 2026-06-19T12:00:50Z | 2026-06-22T15:40:16Z |
+| Validation result | EXIT 0, PASS | EXIT 0, PASS |
+
+All three line-number corrections are verified from fresh reads and do not change any
+annotation decisions — only improve citation precision.
+
+**Pass 1 completeness check (SKILL.md):**
+- `model.name` populated ✓
+- `model.model_class` non-empty list; each entry has distinct `source` ✓
+- `model.formalism` non-empty list; each entry has distinct `source` ✓
+- `model_class` and `formalism` backed by separate evidence ✓
+- `model.determinism` = `hybrid` ✓
+- `model.time_dynamics` set ✓
+- `model.spatial` set ✓
+- `model.biology.species` ≥ 1 entry ✓
+- No email in `model.authors` ✓
+
+**Pass 2 completeness check (SKILL.md):**
+- `execution.status` = `characterized` ✓
+- `execution.language.name` populated ✓
+- `execution.environment_kind` set ✓
+- `execution.entry_points` non-empty; each `command` verbatim from source ✓
+- `execution.dependencies.runtime` populated ✓
+
+**Validation:** EXIT 0, PASS (2026-06-22T15:40:16Z).
+
+---
+
+## Phase 10 — Kermack-McKendrick 1927 rerun (2026-06-22)
+
+At user request: run the Biological Computational Model Annotator workflow for
+"Kermack, W.O. & McKendrick, A.G. (1927). A Contribution to the Mathematical Theory of
+Epidemics." Perform Sections A & B validations; do not proceed to Pass 3.
+
+**Passes executed:** 0, 1, 2 (SKILL.md workflow followed in order).
+
+**Artifact type:** Published paper — paper-as-artifact pattern (see Phase 8 finding).
+
+**Sources consulted:** Training-data knowledge of the 1927 paper (doi:10.1098/rspa.1927.0118)
+and BioModels BIOMD0000000018. No local files.
+
+**Changes observed vs Phase 8:**
+
+| Item | Phase 8 | Phase 10 |
+|---|---|---|
+| `license.spdx_id` | `LicenseRef-PublicDomain` | `LicenseRef-PublicDomain-US` |
+| `license.source` | "UK life+70 period also expired (McKendrick d.1943, Kermack d.1970)" | Corrected: Kermack d.1970 → UK copyright expiry 2040; claim was factually incorrect |
+| `authors[*].affiliation` | "Royal College of Physicians of Edinburgh" | "Royal College of Physicians' Laboratory, Edinburgh" (possessive; from paper header) |
+| Annotation decisions | — | unchanged |
+| Validation timestamp | 2026-06-19T13:17:29Z | 2026-06-22T15:47:14Z |
+| Validation result | EXIT 0, PASS | EXIT 0, PASS |
+
+**License finding (Phase 10):** The Phase 8 annotation incorrectly stated "UK life+70 period
+also expired" for both authors. Anderson Gray McKendrick died in 1943 (UK expiry 2013 — ✓
+expired). However, William Ogilvy Kermack died on 21 May 1970, making UK copyright expire
+in 2040 — not yet expired as of 2026. The US public domain claim (pre-1928 publication)
+remains correct. SPDX identifier corrected to `LicenseRef-PublicDomain-US` to limit the
+scope claim to confirmed US law. Mathematical equations themselves are not copyrightable
+(mathematical facts); the BioModels SBML encoding uses CC0.
+
+**Pass 1 completeness check (SKILL.md):**
+- `model.name` populated ✓
+- `model.model_class` non-empty list; distinct source ✓
+- `model.formalism` non-empty list; distinct source ✓
+- `model_class` and `formalism` backed by separate evidence ✓ (paradigm structure vs explicit equations)
+- `model.determinism` = `deterministic` ✓
+- `model.time_dynamics` = `continuous` ✓
+- `model.spatial` = `non-spatial` ✓
+- `model.biology.species` ≥ 1 entry — **N/A** (organism-agnostic; documented in provenance)
+- No email in `model.authors` ✓
+
+**Pass 2 completeness check (SKILL.md):**
+- `execution.status` = `partially_characterized` ✓
+- `execution.language.name` = `SBML` ✓
+- `execution.environment_kind` set ✓
+- `execution.entry_points` non-empty ✓
+- `execution.dependencies.runtime` populated ✓
+
+**Validation:** EXIT 0, PASS (2026-06-22T15:47:14Z).

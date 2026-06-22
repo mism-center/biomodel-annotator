@@ -1,7 +1,7 @@
 biomodel-annotator validation report
 Model: vivarium-collective/vivarium-chemotaxis
-Run: 2026-06-19T12:00:50Z
-Annotator: biomodel-annotator/0.1 (SKILL.md Passes 0-2, Phase 7 rerun)
+Run: 2026-06-22T15:40:16Z
+Annotator: biomodel-annotator/0.1 (SKILL.md Passes 0-2, Phase 9 rerun)
 Python: C:\Users\powen\PycharmProjects\MISM\.venv\Scripts\python.exe
 Invocation: Validator(input_path=..., model_id=...).validate(ann, meta, exe)
 
@@ -43,8 +43,8 @@ entirely rather than setting mapping_confidence: none.
 io_slots_constructed=0 (W1 warning) is expected — io: {} is empty because Pass 3 was
 not executed in this session per user instruction.
 
-New finding (Phase 7, 2026-06-19): src/validator.py now has a __main__ CLI block that
-exposes structural-only validation as a command-line tool:
-  python src/validator.py --annotation <file> [--input-path <dir>]
-This updates the Phase 4 finding ("src/validator.py is a library, not a CLI script").
-Full validation (structural + semantic + registry) still requires programmatic invocation.
+Phase 9 line number corrections (vs Phase 7):
+  - chemotaxis_flagella.py:21 (MetaDivision import; was :22)
+  - chemotaxis_master.py:22-23 (Metabolism + get_iAF1260b_config; was :23-24)
+  - chemotaxis_master.py:111-135 (generate_processes range; was :115-135)
+All corrections verified from fresh reads. No annotation decisions changed.

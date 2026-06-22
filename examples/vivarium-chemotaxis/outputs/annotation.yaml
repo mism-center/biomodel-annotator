@@ -26,13 +26,13 @@ model:
       iri: null
       ontology_label: null
       ontology: "mamo"
-      source: "chemotaxis_flagella.py:22 (MetaDivision import); paper_experiments.py:31 (agent_environment_experiment import)"
+      source: "chemotaxis_flagella.py:21 (MetaDivision import); paper_experiments.py:31 (agent_environment_experiment import)"
       confidence: high
     - value: "constraint-based model"
       iri: null
       ontology_label: null
       ontology: "mamo"
-      source: "chemotaxis_master.py:23-24 (Metabolism + get_iAF1260b_config import — FBA via iAF1260b metabolic reconstruction)"
+      source: "chemotaxis_master.py:22-23 (Metabolism + get_iAF1260b_config import — FBA via iAF1260b metabolic reconstruction)"
       confidence: high
   formalism:
     - value: "ordinary differential equation model"
@@ -56,7 +56,7 @@ model:
       source: "chemoreceptor_cluster.py:49-60 (MWC receptor cluster: Tsr/Tar methylation state at molecular level)"
       confidence: high
     - value: "cellular"
-      source: "chemotaxis_master.py:115-135 (generates processes for metabolism, transcription, translation, flagella motor, PMF — all intracellular)"
+      source: "chemotaxis_master.py:111-135 (generate_processes: metabolism, transcription, translation, flagella motor, PMF — all intracellular)"
       confidence: high
     - value: "individual"
       source: "paper_experiments.py:31 (agent_environment_experiment — each E. coli cell is an agent navigating an environment)"
@@ -67,7 +67,7 @@ model:
         iri: null
         ontology_label: null
         ontology: "ncbitaxon"
-        source: "chemotaxis_master.py:23 (iAF1260b is the K-12 MG1655 metabolic reconstruction); chemotaxis/data/fasta/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.chromosome.Chromosome.fa (filename)"
+        source: "chemotaxis_master.py:22 (iAF1260b is the K-12 MG1655 metabolic reconstruction); chemotaxis/data/fasta/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.chromosome.Chromosome.fa (filename)"
         confidence: high
     cell_types: []
     anatomy: []
@@ -233,12 +233,12 @@ execution:
     framework: "pytest"
     invocation: "pytest"
     source: "README.md:69; pytest.ini:1-6"
-  notes: "README.md:51 contains a typo: 'chemoreptor_cluster.py' (one 'e' missing); the correct filename is 'chemoreceptor_cluster.py'. The command is preserved verbatim as written. numpy is a practical runtime requirement imported across multiple process files but is absent from setup.py install_requires; README instructs manual installation before -r requirements.txt. pytest.ini addopts: --doctest-modules --strict-markers (--strict-markers present in 2026-06-19 read; confirms strict marker enforcement)."
+  notes: "README.md:51 contains a typo: 'chemoreptor_cluster.py' (one 'e' missing); the correct filename is 'chemoreceptor_cluster.py'. The command is preserved verbatim as written. numpy is a practical runtime requirement imported across multiple process files but is absent from setup.py install_requires; README instructs manual installation before -r requirements.txt. pytest.ini addopts: --doctest-modules --strict-markers (confirmed from fresh read 2026-06-22)."
 
 io: {}
 
 provenance:
-  annotated_at: "2026-06-19T00:00:00Z"
+  annotated_at: "2026-06-22T00:00:00Z"
   annotated_by: "biomodel-annotator/0.1 (SKILL.md Passes 0-2) via Claude (claude-sonnet-4-6)"
   source_root: "C:\\Users\\powen\\PycharmProjects\\MISM\\vivarium-chemotaxis"
   files_inspected:
@@ -250,10 +250,9 @@ provenance:
     - "chemotaxis/processes/chemoreceptor_cluster.py (lines 1-120)"
     - "chemotaxis/processes/flagella_motor.py (lines 1-100)"
     - "chemotaxis/processes/coarse_motor.py (lines 1-90)"
-    - "chemotaxis/processes/membrane_potential.py (lines 1-80)"
     - "chemotaxis/composites/chemotaxis_master.py (full)"
     - "chemotaxis/composites/chemotaxis_flagella.py (lines 1-50)"
-    - "chemotaxis/experiments/paper_experiments.py (lines 1-40)"
+    - "chemotaxis/experiments/paper_experiments.py (lines 1-50)"
   ontology_lookups:
     service: "EBI OLS via ols-ontology MCP"
     embedding_models_available: null
@@ -272,4 +271,4 @@ provenance:
       - scope: "model.biology.proteins_genes — identifier fields (UniProt lookup)"
         reason: "UniProt lookup requires Pass 4 (ols-ontology MCP); deferred with Pass 4"
   human_review_required: true
-  notes: "Passes 0-2 completed following SKILL.md (Phase 7 rerun, 2026-06-19). Source files unchanged from Phase 6 (2026-06-18). Pass 3 (I/O) and Pass 4 (ontology mapping) deferred per user instruction. All iri: fields are null because Pass 4 was not executed — per SKILL.md reproducibility invariant, deferred fields omit mapping_confidence entirely rather than setting it to none. The iAF1260b model identifier (chemotaxis_master.py:23) was used to confirm E. coli K-12 MG1655 as the organism; this reconstruction is genome-scale and strain-specific. New finding (2026-06-19): src/validator.py now has a __main__ CLI block (structural-only) — updates Phase 4 finding in ANNOTATOR_LOG.md."
+  notes: "Passes 0-2 completed following SKILL.md (Phase 9 rerun, 2026-06-22). Line number corrections vs Phase 7: MetaDivision import is at chemotaxis_flagella.py:21 (was :22); Metabolism + get_iAF1260b_config imports are at chemotaxis_master.py:22-23 (was :23-24); generate_processes starts at chemotaxis_master.py:111 (was :115). All corrections verified from fresh reads. Annotation decisions unchanged. Pass 3 (I/O) and Pass 4 (ontology mapping) deferred per user instruction. All iri: fields are null because Pass 4 was not executed — per SKILL.md reproducibility invariant, deferred fields omit mapping_confidence entirely rather than setting it to none."

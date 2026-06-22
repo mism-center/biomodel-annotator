@@ -5,8 +5,8 @@
 **Model class:** agent-based model; constraint-based model  
 **Formalism:** ODE (receptor cluster); stochastic (flagella motor)  
 **SKILL.md passes completed:** 0, 1, 2 (Passes 3, 4 deferred)  
-**Annotation date:** 2026-06-19 (Phase 7 rerun)  
-**Validation:** EXIT 0 (2026-06-19T12:00:50Z)
+**Annotation date:** 2026-06-22 (Phase 9 rerun)  
+**Validation:** EXIT 0 (see outputs/validation_report.txt)
 
 ---
 
@@ -110,8 +110,8 @@ routing table in `references/ontologies.md`. Record `iri:`, `ontology_label:`, a
 ## Key annotation decisions
 
 **model_class:** Two entries — `agent-based model` (evidenced by MetaDivision import in
-chemotaxis_flagella.py:22 and agent\_environment\_experiment import in paper_experiments.py:31)
-and `constraint-based model` (FBA via iAF1260b in chemotaxis_master.py:23-24). Each entry
+chemotaxis_flagella.py:21 and agent\_environment\_experiment import in paper_experiments.py:31)
+and `constraint-based model` (FBA via iAF1260b in chemotaxis_master.py:22-23). Each entry
 has a distinct source file per SKILL.md requirements.
 
 **determinism:** `hybrid` (inferred) — receptor cluster uses deterministic Euler ODE
@@ -119,10 +119,19 @@ has a distinct source file per SKILL.md requirements.
 (flagella_motor.py:43-46, Sneddon 2012).
 
 **time\_dynamics:** `discrete` (inferred) — all processes use fixed-timestep updates
-(`time_step: 0.01` in flagella\_motor.py:49; Euler steps in chemoreceptor\_cluster.py:30).
+(`time_step: 0.01` in flagella\_motor.py:54; Euler steps in chemoreceptor\_cluster.py:30).
 
 **numpy dependency:** Runtime requirement (imported throughout), but absent from
 `setup.py install_requires`. Source is README.md:32-35 only.
 
 **Entry point typo:** README.md:51 reads `chemoreptor_cluster.py` (one 'e' missing).
 The command is preserved verbatim in `entry_points[0].command`.
+
+## Phase 9 corrections vs Phase 7
+
+| Item | Phase 7 | Phase 9 |
+|---|---|---|
+| MetaDivision import line | `chemotaxis_flagella.py:22` | `chemotaxis_flagella.py:21` |
+| Metabolism + iAF1260b lines | `chemotaxis_master.py:23-24` | `chemotaxis_master.py:22-23` |
+| generate_processes range | `:115-135` | `:111-135` |
+| Annotation decisions | — | unchanged |

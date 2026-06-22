@@ -73,6 +73,6 @@ execution:
     framework: "pytest"
     invocation: "pytest"
     source: "README.md:69; pytest.ini:1-6"
-  notes: "README.md:51 typo 'chemoreptor_cluster.py' (correct: 'chemoreceptor_cluster.py') preserved verbatim. numpy absent from setup.py install_requires; README instructs manual installation. pytest.ini addopts includes --strict-markers (confirmed 2026-06-19)."
+  notes: "README.md:51 typo 'chemoreptor_cluster.py' (correct: 'chemoreceptor_cluster.py') preserved verbatim. numpy absent from setup.py install_requires; README instructs manual installation. pytest.ini addopts: --doctest-modules --strict-markers (confirmed 2026-06-22 fresh read)."
 
 io: {}
