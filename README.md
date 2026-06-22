@@ -19,7 +19,51 @@ You need [Claude Code](https://claude.com/claude-code) installed. Skills are loa
 
 Each skill is a directory whose root contains a `SKILL.md` file.
 
-### 2. OLS MCP server (required for Pass 4 — ontology mapping)
+### 2. biomodel-validator MCP server (required for the Sections A & B validation checkpoint)
+
+The skill calls a local MCP server at the validation checkpoint between Pass 2 and Pass 3. The server wraps `src/validator.py` and exposes a single tool, `validate_sections`, that checks your partial annotation against the required field list for Sections A and B.
+
+**Install the dependency** (PyYAML is already required; fastmcp is new):
+
+```bash
+pip install fastmcp pyyaml
+```
+
+**Registering the MCP server.** The registered name must be `biomodel-validator`.
+
+Via the Claude Code CLI:
+
+```bash
+claude mcp add --transport stdio biomodel-validator python /path/to/biomodel-annotator/src/mcp_server.py
+```
+
+Or by editing the config directly:
+
+```jsonc
+// ~/.claude.json  (user-level) or <project>/.mcp.json (project-level)
+{
+  "mcpServers": {
+    "biomodel-validator": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["/path/to/biomodel-annotator/src/mcp_server.py"]
+    }
+  }
+}
+```
+
+Replace `/path/to/biomodel-annotator` with the actual install path (e.g. `~/.claude/skills/biomodel-annotator` for a user-level install).
+
+Verify the server is connected before running the skill:
+
+```bash
+claude mcp list
+# expect: biomodel-validator  ✓ connected
+```
+
+Without this server, the skill cannot proceed past the validation checkpoint. Unlike the OLS server (which degrades gracefully), the validation checkpoint is a hard gate.
+
+### 3. OLS MCP server (required for Pass 4 — ontology mapping)
 
 Pass 4 of the workflow attaches ontology IRIs to every mappable term via the **EBI Ontology Lookup Service**. The skill calls these tools through a Model Context Protocol server it expects to find under the namespace `ols-ontology`:
 

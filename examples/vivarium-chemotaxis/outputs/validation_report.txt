@@ -1,107 +1,50 @@
-Annotation Validator — biomodel-annotator/0.1
-============================================================
-Input:   examples/vivarium-chemotaxis/outputs/annotation.yaml
-Run at:  2026-06-17T20:05:19Z
-Model:   vivarium-collective/vivarium-chemotaxis
-============================================================
+biomodel-annotator validation report
+Model: vivarium-collective/vivarium-chemotaxis
+Run: 2026-06-22T15:40:16Z
+Annotator: biomodel-annotator/0.1 (SKILL.md Passes 0-2, Phase 9 rerun)
+Python: C:\Users\powen\PycharmProjects\MISM\.venv\Scripts\python.exe
+Invocation: Validator(input_path=..., model_id=...).validate(ann, meta, exe)
 
---- STRUCTURAL VALIDATION ---
-Checking Section A (model) required fields ...
-  [OK] model.name                => "vivarium-chemotaxis"
-  [OK] model.short_description
-  [OK] model.model_class         (1 entry)
-  [OK] model.formalism           (2 entries)
-  [OK] model.determinism         => "hybrid"
-  [OK] model.time_dynamics       => "continuous"
-  [OK] model.spatial             => "non-spatial"
+EXIT 0
 
-Checking Section B (execution) required fields ...
-  [OK] execution.status           => "characterized"
-  [OK] execution.language.name    => "Python"
-  [OK] execution.environment_kind => "pip"
-  [OK] execution.entry_points     (4 entries)
+--- Structural Validation ---
+status: PASS
+missing_required_fields: []
+empty_required_fields: []
 
-Section A status:  PASS  (0 missing, 0 empty)
-Section B status:  PASS  (0 missing, 0 empty)
-Structural overall: PASS
+--- Semantic Validation ---
+needs_review_count: 0          (threshold: >5 → warning)
+needs_review_warning: false
+ontology_coverage_pct: null    (eligible=0 because mapping_confidence fields absent — Pass 4 not run)
+ontology_coverage_warning: false
+missing_source_citations: []
+execution_command_verified: true
+execution_command_path: null
+undocumented_dependencies: []
 
---- SEMANTIC VALIDATION ---
-needs_review count:         0  (threshold: >5)   [OK]
-Ontology coverage:          N/A  (no eligible fields — Pass 4 not executed)
-  eligible fields:          0
-  mapped (high/medium/low): 0
-  unmapped (none):          0  (mapping_confidence omitted; Pass 4 deferred)
-Missing source citations:   0  [OK]
-Execution command check:    SKIPPED (entry_points used; no legacy execution_command key)
-Undocumented dependencies:  0  [OK]
+--- Registry Compatibility ---
+register_model_constructable: true
+missing_registry_fields: []
+io_slots_constructed: 0        (W1: io: {} empty — Pass 3 deferred)
+warnings:
+  - "Zero IOSlot objects constructable from inputs/outputs"
 
-Semantic overall: PASS
+--- Overall ---
+overall_status: PASS
+failure_reasons: []
 
---- REGISTRY COMPATIBILITY ---
-mism_registry installed — real check executed (not optimistic).
-register_model_constructable: True
-  name:              "vivarium-chemotaxis"  (metadata.yaml)
-  source_repository: "https://github.com/vivarium-collective/vivarium-chemotaxis"
-  execution_type:    python
-io_slots_constructed: 0  (io: {} — Pass 3 deferred; no IOSlot data available)
+--- Notes ---
+ontology_coverage_pct = null (not 0%) is the correct result for a Passes 0-2 annotation.
+_compute_ontology_coverage() returns None when no mapping_confidence fields are present
+(eligible=0). ontology_coverage_warning is only set when coverage is not None AND < 40%.
+Per SKILL.md reproducibility invariant, deferred Pass 4 fields omit mapping_confidence
+entirely rather than setting mapping_confidence: none.
 
-Registry overall: PASS (with W1)
+io_slots_constructed=0 (W1 warning) is expected — io: {} is empty because Pass 3 was
+not executed in this session per user instruction.
 
-============================================================
-OVERALL RESULT:  PASS
-EXIT CODE:       0
-============================================================
-
---- WARNINGS (non-fatal) ---
-  [W1] io_slots_constructed = 0.
-       Cause: io: block is empty (Pass 3 deferred). No IOSlot objects could be
-       constructed from inputs/outputs. Will resolve when Pass 3 is executed.
-
---- NOTES ---
-  - This annotation covers Passes 0, 1, and 2 only.
-  - Pass 3 (I/O) was not executed; io: block is intentionally empty.
-  - Pass 4 (ontology mapping) was not executed; ols-ontology MCP not connected.
-    All iri: fields are null. Fields requiring OLS queries are listed in
-    provenance.partial_annotation_scope.deferred — not attempted, not failed.
-  - Ontology coverage returns N/A (null) because no mapping_confidence fields are
-    present. This is distinct from 0% (which would mean fields were attempted and
-    none mapped). No coverage warning is emitted when eligible=0.
-  - needs_review count = 0 (the two notes in provenance.needs_review do not contain
-    the literal string "needs_review" as a value).
-  - mism_registry IS installed in this environment; real registry check ran.
-    Registry fields (name, source_repository, execution_type) are present in
-    metadata.yaml as flat top-level keys for registry compatibility.
-  - human_review_required: true (Pass 4 incomplete)
-
---- FULL REPORT (JSON) ---
-{
-  "run_id": "",
-  "model_id": "vivarium-collective/vivarium-chemotaxis",
-  "annotated_at": "2026-06-17T20:05:19.106054+00:00",
-  "exit_code": 0,
-  "structural_validation": {
-    "status": "pass",
-    "missing_required_fields": [],
-    "empty_required_fields": []
-  },
-  "semantic_validation": {
-    "needs_review_count": 0,
-    "needs_review_warning": false,
-    "ontology_coverage_pct": null,
-    "ontology_coverage_warning": false,
-    "missing_source_citations": [],
-    "execution_command_verified": true,
-    "execution_command_path": null,
-    "undocumented_dependencies": []
-  },
-  "registry_compatibility": {
-    "register_model_constructable": true,
-    "missing_registry_fields": [],
-    "io_slots_constructed": 0,
-    "warnings": [
-      "Zero IOSlot objects constructable from inputs/outputs"
-    ]
-  },
-  "overall_status": "pass",
-  "failure_reasons": []
-}
+Phase 9 line number corrections (vs Phase 7):
+  - chemotaxis_flagella.py:21 (MetaDivision import; was :22)
+  - chemotaxis_master.py:22-23 (Metabolism + get_iAF1260b_config; was :23-24)
+  - chemotaxis_master.py:111-135 (generate_processes range; was :115-135)
+All corrections verified from fresh reads. No annotation decisions changed.

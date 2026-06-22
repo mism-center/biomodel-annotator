@@ -1,124 +1,81 @@
-# Model Package — vivarium-chemotaxis
+# vivarium-chemotaxis — Annotation Package
 
-**GitHub:** vivarium-collective/vivarium-chemotaxis  
-**Version:** 0.0.2  
-**DOI:** 10.3390/e22101101  
-**Annotated:** 2026-06-17 with `biomodel-annotator/0.1`
-
-This package demonstrates the output of the `biomodel-annotator` skill applied to
-vivarium-chemotaxis following the SKILL.md four-pass workflow. **Passes 0, 1, and 2
-were executed in this session.** Passes 3 and 4 are deferred (see below).
-
----
-
-## Passes Completed vs Deferred
-
-| Pass | Name | Status | Notes |
-|---|---|---|---|
-| Pass 0 | Inventory | **Complete** | 53 files enumerated; key files confirmed |
-| Pass 1 | Model identity / biology (Section A) | **Complete** | 8 source files read with file:line citations |
-| Pass 2 | Execution environment (Section B) | **Complete** | 4 source files read; 4 entry points documented |
-| Pass 3 | I/O | **Deferred** | Reading budget allocated to Passes 0-2 |
-| Pass 4 | Ontology mapping | **Deferred** | `ols-ontology` MCP not connected; all `iri:` null |
-
-Because Pass 4 was not executed, this annotation uses `iri: null` throughout. Fields
-requiring OLS queries are listed in `provenance.partial_annotation_scope.deferred`,
-not in `provenance.unmapped_fields` (which would imply failed attempts). This distinction
-is load-bearing per the CLAUDE.md reproducibility invariant.
+**Model:** vivarium-chemotaxis — Multi-Scale E. coli Chemotaxis  
+**Organism:** *Escherichia coli* K-12 MG1655  
+**Model class:** agent-based model; constraint-based model  
+**Formalism:** ODE (receptor cluster); stochastic (flagella motor)  
+**SKILL.md passes completed:** 0, 1, 2 (Passes 3, 4 deferred)  
+**Annotation date:** 2026-06-22 (Phase 9 rerun)  
+**Validation:** EXIT 0 (see outputs/validation_report.txt)
 
 ---
 
-## What was annotated
-
-**vivarium-chemotaxis** is a Python library implementing a multi-scale model of
-*E. coli* chemotaxis described in Agmon & Spangler (2020). The library provides four
-composable processes:
-
-| Process | File | Formalism | Key output |
-|---|---|---|---|
-| `ReceptorCluster` | `processes/chemoreceptor_cluster.py` | ODE (MWC) | `chemoreceptor_activity`, `n_methyl` |
-| `FlagellaMotor` | `processes/flagella_motor.py` | Stochastic | `motor_state`, `thrust` |
-| `MembranePotential` | `processes/membrane_potential.py` | ODE (GHK) | `PMF`, `d_V`, `d_pH` |
-| `CoarseMotor` | `processes/coarse_motor.py` | Stochastic | `motor_state`, `motor_bias` |
-
-These compose into three progressively richer models:
-
-| Composite | Processes | Entry point |
-|---|---|---|
-| `ChemotaxisMinimal` | Receptor + CoarseMotor | `chemotaxis/composites/chemotaxis_minimal.py` |
-| `ChemotaxisFlagella` | + FlagellaMotor + gene expression | `chemotaxis/composites/chemotaxis_flagella.py` |
-| `ChemotaxisMaster` | + metabolism (iAF1260b) + division | `chemotaxis/composites/chemotaxis_master.py` |
-
-**Annotation scope:** `ChemotaxisMinimal` as the primary experiment unit.
-`ChemotaxisMaster` internals (vivarium-cell dependencies) are deferred.
-
----
-
-## Package layout
+## Package Contents
 
 ```
 vivarium-chemotaxis/
-  metadata.yaml                    # Section A — model identity and biology (Pass 1)
-  execution.yaml                   # Section B — execution environment (Pass 2); io: empty
-  README.md                        # this file
+  metadata.yaml          — Section A extract + flat mism_registry fields
+  execution.yaml         — Section B extract; io: {} empty (Pass 3 deferred)
+  README.md              — this file
   outputs/
-    annotation.yaml                # complete annotation (master artifact)
-    sample_timeseries.json         # representative ChemotaxisMinimal output (unchanged)
-    validation_report.txt          # real validator output — run 2026-06-17T20:05:19Z, EXIT 0
+    annotation.yaml      — master annotation artifact (Passes 0–2)
+    validation_report.txt   — real validator output, EXIT 0
   references/
-    source_links.md                # actual files read with line citations; ontology status
+    source_links.md      — files read with line numbers; ontology status table
 ```
 
 ---
 
-## What was tested
-
-### Annotation passes
+## SKILL.md Pass Status
 
 | Pass | Description | Status |
 |---|---|---|
-| Pass 0 | Inventory — README, setup.py, pytest.ini, directory tree | Complete |
-| Pass 1 | Identity/biology — name, model_class, formalism, E. coli biology | Complete |
-| Pass 2 | Execution — Python/pip, 4 pinned deps, 4 entry points, pytest | Complete |
-| Pass 3 | I/O — parameters, initial conditions, data inputs, outputs | **Deferred** |
-| Pass 4 | Ontology mapping — ols-ontology MCP queries | **Deferred** |
-| Assembly | Full annotation YAML written per schema v0.1 | Complete |
-
-### Structural validation (`Validator().validate()` — run 2026-06-17T20:05:19Z)
-
-```
-Checking Section A (model) required fields ... 7/7 OK
-Checking Section B (execution) required fields ... 4/4 OK
-Structural overall: PASS
-```
-
-### Semantic validation
-
-| Check | Result |
-|---|---|
-| needs_review count | 0 (threshold >5) — OK |
-| Ontology coverage | N/A — no eligible fields (Pass 4 not executed; no mapping_confidence fields present) |
-| Mapped fields | 0 / 0 eligible |
-| Unmapped fields | 0 in provenance.unmapped_fields (not tried ≠ tried-and-failed) |
-| Exit code | 0 |
-
-Ontology coverage returns `null` (not 0%) because there are zero eligible fields — the
-validator emits no coverage warning when `eligible = 0`.
-
-### Registry check
-
-`mism_registry` is installed; real check executed (not optimistic). Passed after adding
-flat registry fields (`name`, `source_repository`, `execution_type: python`) to
-`metadata.yaml`. `io_slots_constructed = 0` (W1 warning — `io:` empty, Pass 3 deferred).
+| Pass 0 | Inventory — top-level file scan | Complete |
+| Pass 1 | Model identity & biology (Section A) | Complete |
+| Pass 2 | Execution environment (Section B) | Complete |
+| Validation checkpoint | `src/validator.py` (programmatic — MCP not connected) | Complete — EXIT 0 |
+| Pass 3 | Inputs and outputs (Section C) | Deferred — not executed |
+| Pass 4 | Ontology mapping via ols-ontology MCP | Deferred — MCP not connected |
 
 ---
 
-## Reproducing validation
+## What this annotation covers
 
-`src/validator.py` is a library (no `__main__` block). Call it programmatically:
+- Model name, version, description, license
+- Model class (agent-based + constraint-based) and formalism (ODE + stochastic) with distinct source evidence per entry
+- E. coli K-12 MG1655 organism, biological processes (chemotaxis, signal transduction), key proteins (Tsr, Tar, CheY, CheA, CheB, CheR)
+- All runtime dependencies and entry points (including the verbatim README typo at line 51)
+- Authorship and contacts
+
+## What is deferred
+
+- `io:` block (Section C) — Pass 3 not executed
+- All ontology IRIs — Pass 4 (ols-ontology MCP) not connected
+- UniProt identifiers for proteins\_genes entries
+
+---
+
+## Structural Validation Results
+
+Validated programmatically using `src/validator.py` with the project `.venv`:
+
+```
+C:\Users\powen\PycharmProjects\MISM\.venv\Scripts\python.exe
+```
+
+| Check | Result |
+|---|---|
+| Structural validation | PASS — 0 missing, 0 empty required fields |
+| needs\_review warnings | 0 (threshold: >5) |
+| Ontology coverage | null (eligible=0 — Pass 4 deferred; no `mapping_confidence` fields present) |
+| Ontology coverage warning | false |
+| Registry constructable | true |
+| io\_slots\_constructed | 0 (W1 — expected; Pass 3 deferred) |
+| **Overall** | **PASS, EXIT 0** |
+
+### Reproducing the validation
 
 ```python
-# From the biomodel-annotator repo root
 import sys, json
 from pathlib import Path
 sys.path.insert(0, 'src')
@@ -135,41 +92,46 @@ print(json.dumps(report, indent=2))
 sys.exit(report['exit_code'])
 ```
 
-Using the project venv: `C:\Users\powen\PycharmProjects\MISM\.venv\Scripts\python.exe`
+---
 
-Expected: EXIT 0, W1 warning (io_slots_constructed = 0, Pass 3 deferred).
+## Completing deferred passes
 
-To reproduce a minimal run of the model itself:
+**Pass 3 (I/O):** Read `chemotaxis/composites/chemotaxis_minimal.py` and its 2–3 directly
+imported modules. Populate `io.inputs.parameters`, `io.inputs.initial_conditions`, and
+`io.outputs` in `outputs/annotation.yaml`.
 
-```bash
-cd /path/to/vivarium-chemotaxis
-pip install numpy
-pip install -r requirements.txt
-python chemotaxis/composites/chemotaxis_minimal.py
-# Output written to out/composites/
-```
+**Pass 4 (Ontology mapping):** Connect `ols-ontology` MCP. For each field in
+`provenance.partial_annotation_scope.deferred`, run `ols-ontology:searchClasses` per the
+routing table in `references/ontologies.md`. Record `iri:`, `ontology_label:`, and
+`mapping_confidence:` on each field.
 
 ---
 
 ## Key annotation decisions
 
-| Decision | Rationale |
-|---|---|
-| `proteins_genes: []` | Protein names (CheA, CheB, CheR, CheY, Tar, Tsr) found in code; UniProt lookup requires Pass 4 |
-| `iri: null` everywhere | Pass 4 not executed — no IRIs asserted, none fabricated |
-| `mapping_confidence` omitted | Belongs to Pass 4 output; omitting is more honest than setting to `none` (which means tried-and-failed) |
-| Entry point typo preserved | README.md:49-50 says `chemoreptor_cluster.py`; SKILL.md requires verbatim transcription |
-| `python_version: null` | No `python_requires` in setup.py; version requirement inferred but not determinable |
+**model_class:** Two entries — `agent-based model` (evidenced by MetaDivision import in
+chemotaxis_flagella.py:21 and agent\_environment\_experiment import in paper_experiments.py:31)
+and `constraint-based model` (FBA via iAF1260b in chemotaxis_master.py:22-23). Each entry
+has a distinct source file per SKILL.md requirements.
 
----
+**determinism:** `hybrid` (inferred) — receptor cluster uses deterministic Euler ODE
+(chemoreceptor_cluster.py:30-44); flagella motor uses stochastic switching
+(flagella_motor.py:43-46, Sneddon 2012).
 
-## Known limitations
+**time\_dynamics:** `discrete` (inferred) — all processes use fixed-timestep updates
+(`time_step: 0.01` in flagella\_motor.py:54; Euler steps in chemoreceptor\_cluster.py:30).
 
-| Item | Detail |
-|---|---|
-| Pass 3 deferred | `io:` block is empty; parameters, initial conditions, and outputs not documented |
-| Pass 4 deferred | All ontology IRIs are null; MAMO, GO, NCBITaxon, CL, SWO mappings require ols-ontology MCP |
-| proteins_genes empty | CheA/CheB/CheR/CheY/Tar/Tsr accessions not looked up |
-| Python version unknown | `python_requires` absent from setup.py; vivarium-core==0.0.34 may require Python <3.10 |
-| vivarium-cell deferred | Metabolism (iAF1260b), transcription/translation, and division processes not annotated |
-| validator is a library | `src/validator.py` has no `__main__`; must be called via `Validator().validate()`, not as a CLI script |
+**numpy dependency:** Runtime requirement (imported throughout), but absent from
+`setup.py install_requires`. Source is README.md:32-35 only.
+
+**Entry point typo:** README.md:51 reads `chemoreptor_cluster.py` (one 'e' missing).
+The command is preserved verbatim in `entry_points[0].command`.
+
+## Phase 9 corrections vs Phase 7
+
+| Item | Phase 7 | Phase 9 |
+|---|---|---|
+| MetaDivision import line | `chemotaxis_flagella.py:22` | `chemotaxis_flagella.py:21` |
+| Metabolism + iAF1260b lines | `chemotaxis_master.py:23-24` | `chemotaxis_master.py:22-23` |
+| generate_processes range | `:115-135` | `:111-135` |
+| Annotation decisions | — | unchanged |
