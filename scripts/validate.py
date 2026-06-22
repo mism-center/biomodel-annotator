@@ -1,8 +1,21 @@
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#   "pyyaml>=6,<7",
+# ]
+# ///
 """
 Annotation Validator
 
 Runs structural, semantic, and registry compatibility checks on the produced
 metadata.yaml, execution.yaml, and full annotation YAML. Writes validation_report.json.
+
+Bundled skill script — run at the validation checkpoint between Pass 2 and Pass 3:
+
+    uv run scripts/validate.py --annotation <file> --input-path <repo>
+
+(`uv run` resolves the PyYAML dependency inline — no install step, no MCP server.
+Fallback if uv is unavailable: `python3 scripts/validate.py ...` with PyYAML present.)
 
 Exit code rules:
     0 — all required fields present, execution_command verified, registry check passed
@@ -36,18 +49,24 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Fields required in annotation['model'] (Section A).
+# Mirrors the REQUIRED markers in references/schema.md (schema.md is the source of
+# truth — keep these in sync; see CLAUDE.md "Cross-file consistency").
 # kind values:
-#   "scalar"   — envelope {value, source, confidence}; value must be non-empty
+#   "scalar"   — envelope {value, source, confidence} or bare scalar; value must be non-empty
 #   "list"     — must be a non-empty list
-#   "dict:KEY" — must be a dict whose KEY sub-field is present
+#   "dict:KEY" — must be a dict whose KEY sub-field is present and non-null
 REQUIRED_SECTION_A: list[tuple[str, str]] = [
-    ("name",             "scalar"),
-    ("short_description","scalar"),
-    ("model_class",      "list"),
-    ("formalism",        "list"),
-    ("determinism",      "scalar"),
-    ("time_dynamics",    "scalar"),
-    ("spatial",          "scalar"),
+    ("name",                "scalar"),
+    ("short_description",   "scalar"),
+    ("long_description",    "scalar"),
+    ("version",             "scalar"),
+    ("external_identifier", "dict:value"),
+    ("multiscale",          "scalar"),
+    ("model_scales",        "list"),
+    ("authors",             "list"),
+    ("contacts",            "list"),
+    ("license",             "dict:spdx_id"),
+    ("publications",        "list"),
 ]
 
 # Fields required in annotation['execution'] (Section B).
@@ -564,11 +583,19 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
     parser = argparse.ArgumentParser(
+        prog="validate.py",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            "Validate Section A (model) and Section B (execution) of an annotation YAML. "
-            "Intended to be run after Pass 1 and Pass 2 of the biomodel-annotator skill, "
-            "before Pass 3 begins. Exits 0 on pass, 1 on failure."
-        )
+            "Validate Section A (model) and Section B (execution) of an annotation YAML\n"
+            "against the REQUIRED fields in references/schema.md. Run after Pass 1 and\n"
+            "Pass 2 of the biomodel-annotator skill, before Pass 3 begins.\n\n"
+            "Exit codes:\n"
+            "  0  pass  — all REQUIRED Section A & B fields present and non-empty\n"
+            "  1  fail  — a REQUIRED field is missing or empty (details in stdout JSON)\n"
+            "  2  usage — bad args, unreadable file, or unparseable YAML\n\n"
+            "Example:\n"
+            "  uv run scripts/validate.py --annotation mymodel.annotation.yaml --input-path ./mymodel"
+        ),
     )
     parser.add_argument(
         "--annotation",

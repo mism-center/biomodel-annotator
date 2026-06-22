@@ -19,49 +19,24 @@ You need [Claude Code](https://claude.com/claude-code) installed. Skills are loa
 
 Each skill is a directory whose root contains a `SKILL.md` file.
 
-### 2. biomodel-validator MCP server (required for the Sections A & B validation checkpoint)
+### 2. Validator script (required for the Sections A & B validation gate)
 
-The skill calls a local MCP server at the validation checkpoint between Pass 2 and Pass 3. The server wraps `src/validator.py` and exposes a single tool, `validate_sections`, that checks your partial annotation against the required field list for Sections A and B.
+As the final step before presenting the annotation, the skill runs the bundled script `scripts/validate.py` on the written file, checking the `model:` and `execution:` sections against the REQUIRED fields for Sections A and B in `references/schema.md`. No MCP server, no install step.
 
-**Install the dependency** (PyYAML is already required; fastmcp is new):
-
-```bash
-pip install fastmcp pyyaml
-```
-
-**Registering the MCP server.** The registered name must be `biomodel-validator`.
-
-Via the Claude Code CLI:
+The script declares its one dependency (PyYAML) inline via [PEP 723](https://peps.python.org/pep-0723/), so [`uv`](https://docs.astral.sh/uv/) resolves it at run time:
 
 ```bash
-claude mcp add --transport stdio biomodel-validator python /path/to/biomodel-annotator/src/mcp_server.py
+uv run scripts/validate.py --annotation <partial-annotation.yaml> --input-path <model-repo-root>
 ```
 
-Or by editing the config directly:
+It prints a JSON result to stdout and sets its exit code: `0` pass, `1` fail (with the offending field paths), `2` usage error. This is a hard gate — on exit 1 the skill goes back, fixes the flagged fields from the sources, and re-runs until it exits 0; it never presents a failing annotation.
 
-```jsonc
-// ~/.claude.json  (user-level) or <project>/.mcp.json (project-level)
-{
-  "mcpServers": {
-    "biomodel-validator": {
-      "type": "stdio",
-      "command": "python",
-      "args": ["/path/to/biomodel-annotator/src/mcp_server.py"]
-    }
-  }
-}
-```
-
-Replace `/path/to/biomodel-annotator` with the actual install path (e.g. `~/.claude/skills/biomodel-annotator` for a user-level install).
-
-Verify the server is connected before running the skill:
+If `uv` is unavailable, run it on any Python 3.9+ interpreter that has PyYAML installed:
 
 ```bash
-claude mcp list
-# expect: biomodel-validator  ✓ connected
+pip install pyyaml
+python3 scripts/validate.py --annotation <partial-annotation.yaml>
 ```
-
-Without this server, the skill cannot proceed past the validation checkpoint. Unlike the OLS server (which degrades gracefully), the validation checkpoint is a hard gate.
 
 ### 3. OLS MCP server (required for Pass 4 — ontology mapping)
 
@@ -188,11 +163,14 @@ To consume a specific version, download the corresponding asset from the Release
 
 ## Development
 
-`src/validator.py` is a post-hoc validation utility for the annotation YAML the skill produces. It is **not** part of the installed skill and is excluded from release zips.
+`scripts/validate.py` is the bundled validator. It ships with the skill and the skill runs it as the final Sections A & B validation gate (see Prerequisite 2). The same file also exposes a `Validator` class for richer post-hoc use — the full `validate()` adds semantic checks (execution-command path verification, dependency cross-check against `setup.py`/`pyproject.toml`) and a registry-compatibility dry-run on top of the structural check the CLI runs.
 
 ```python
+import sys
 from pathlib import Path
-from src.validator import Validator
+
+sys.path.insert(0, "scripts")        # validate.py lives in scripts/
+from validate import Validator
 
 v = Validator(input_path=Path("/path/to/model-repo"))
 report = v.validate(

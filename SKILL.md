@@ -85,17 +85,7 @@ You want a reviewer to be able to run this model after reading the YAML. Pull ou
 
 If the model is just a single file (e.g. an SBML file), execution metadata is mostly about the simulator it targets — capture that instead.
 
-### Validation checkpoint — Sections A & B
-
-After completing both Pass 1 and Pass 2, call the `biomodel-validator` MCP tool before proceeding to Pass 3. This validates the `model:` and `execution:` sections together against the required field list in one automated step — no temp file, no bash command.
-
-Call **`biomodel-validator:validate_sections`** with:
-
-- `annotation_yaml` — the full YAML string you have built so far: `model:` and `execution:` filled, `io: {}` and `provenance: {}` as empty stubs.
-
-**If the tool returns `status: "pass"`:** proceed to Pass 3.
-
-**If the tool returns `status: "fail"`:** the `missing_required_fields` and `empty_required_fields` lists identify every field that needs attention by path (e.g. `"model.name"`, `"execution.entry_points"`). Return to Pass 1 or Pass 2 as needed, re-read the relevant source files, fill or correct each flagged field, then call `biomodel-validator:validate_sections` again. Do not advance to Pass 3 until the tool returns `status: "pass"`.
+Sections A and B are validated against `references/schema.md` at the end, in Assembly — there is no mid-workflow checkpoint. Fill `model:` and `execution:` as completely as the sources allow now; you will run the structural gate once, on the finished file, before presenting it.
 
 ### Pass 3 — Inputs and outputs (Section C)
 
@@ -142,9 +132,22 @@ Batch tip: group queries by ontology so you reuse the same `ontologyId` repeated
 Once all four passes are done:
 
 1. Render the YAML following `references/schema.md`. Use the BioModels/MIRIAM qualifier vocabulary where it applies (e.g. `bqbiol:is`, `bqbiol:hasTaxon`, `bqmodel:isDerivedFrom`).
-2. Add a `provenance` block: timestamp, the path you annotated, the list of source files you actually read, the OLS API version if available, and a `human_review_required: true` flag.
+2. Add a `provenance` block: timestamp, the path you annotated, the list of source files you actually read, the OLS API version if available, a `validation` sub-block (see `references/schema.md`), and a `human_review_required: true` flag.
 3. Write the file to the working directory as `<model-name>.annotation.yaml`. Use a slug of the model name (lowercase, hyphens) for the filename.
-4. Briefly summarize for the user: what type of model it is, the most notable fields you filled, anything where confidence was low, and which sections need human review most. Then present the file.
+4. **Validation gate — mandatory, run on the file you just wrote. Do not present the annotation until this exits 0.** Run the bundled validator against the real output file (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server):
+
+   ```bash
+   uv run scripts/validate.py --annotation <slug>.annotation.yaml --input-path <model-repo-root>
+   ```
+
+   (If `uv` is unavailable, fall back to `python3 scripts/validate.py --annotation <slug>.annotation.yaml` with PyYAML installed.) It checks the `model:` and `execution:` sections against the REQUIRED fields in `references/schema.md`, prints a JSON result to stdout, and sets its exit code:
+
+   - **Exit 0 (`status: "pass"`):** record `provenance.validation` (method `cli`, `status: pass`, `flagged_fields: []`) and proceed to step 5.
+   - **Exit 1 (`status: "fail"`):** this is an instruction to go back and fix, not a reason to stop. The `missing_required_fields` and `empty_required_fields` lists name every field needing attention by path (e.g. `"model.name"`, `"execution.entry_points"`). For each path: go back to the pass that owns it (Pass 1 for `model.*`, Pass 2 for `execution.*`), re-read the source files, and fill or correct the field in the written file — do not fabricate a value to satisfy the check; if a source truly lacks it, that is a `confidence: none` / `not_determined` value, which still resolves the structural gate. Record every path you touched in `provenance.validation.flagged_fields`, then re-run the validator. Repeat this fix-and-re-run loop until it exits 0. Never present a `status: "fail"` annotation.
+   - **Exit 2:** usage error (bad path or unparseable YAML) — fix the invocation or the YAML and re-run.
+
+   This is the only structural gate and it is not optional. Running it is the definition of "done" — an annotation that has not exited 0 is not finished, regardless of how complete it looks.
+5. Briefly summarize for the user: what type of model it is, the most notable fields you filled, anything where confidence was low, and which sections need human review most. Then present the file.
 
 ---
 
@@ -202,3 +205,7 @@ Pointers and per-field ontology choices are in `references/ontologies.md`.
 - `references/ontologies.md` — which ontology to consult for which field, with OLS query tips.
 
 Read both before writing your final output.
+
+## Available scripts
+
+- **`scripts/validate.py`** — Sections A & B structural check against `references/schema.md`. Run as the final validation gate in Assembly, on the written annotation file: `uv run scripts/validate.py --annotation <file> --input-path <repo>`. Exits 0 pass / 1 fail / 2 usage error; prints a JSON result to stdout. See `--help` for details.

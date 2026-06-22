@@ -10,14 +10,13 @@ A Claude Code **skill** plus a small Python support layer. The skill itself is t
 - `references/schema.md` — the YAML schema the skill must emit.
 - `references/ontologies.md` — per-field routing to OLS ontologies + query strategy.
 
-The Python support layer lives in `src/` and ships with the skill in every release zip:
+The Python support layer is a single bundled script that ships with the skill in every release zip:
 
-- `src/validator.py` — structural validation of Section A (`model:`) and Section B (`execution:`) against the required fields in `references/schema.md`.
-- `src/mcp_server.py` — FastMCP stdio server that exposes `validator.py` as the `biomodel-validator` MCP tool, called by the skill at the validation checkpoint between Pass 2 and Pass 3.
+- `scripts/validate.py` — structural validation of Section A (`model:`) and Section B (`execution:`) against the REQUIRED fields in `references/schema.md`. The skill runs it as the final validation gate in Assembly (after writing the annotation, before presenting it) via `uv run scripts/validate.py --annotation <file> --input-path <repo>`; `uv` resolves the inline PyYAML dependency (PEP 723), so there is no install step and no MCP server. The file also exposes a `Validator` class for programmatic/post-hoc use (structural + semantic + registry checks). The script's REQUIRED-field lists are the executable mirror of schema.md — keep them in sync.
 
-**When editing Markdown skill content** (the three `.md` files), no Python tools are needed. **When editing `src/`**, standard Python applies: `pip install fastmcp pyyaml`, and run `python src/mcp_server.py` to start the server locally for testing.
+**When editing Markdown skill content** (the three `.md` files), no Python tools are needed. **When editing `scripts/validate.py`**, exercise it with `uv run scripts/validate.py --annotation <some-annotation.yaml>` (or `python3` with PyYAML installed); there is no separate manifest or server to start.
 
-Note: a parent `CLAUDE.md` at `../.claude/CLAUDE.md` describes a generic Python/PowerShell workflow. Treat it as out of scope when editing skill or `src/` content here — there is no venv at this directory level and no PyLint target to run.
+Note: a parent `CLAUDE.md` at `../.claude/CLAUDE.md` describes a generic Python/PowerShell workflow. Treat it as out of scope when editing skill or `scripts/` content here — there is no venv at this directory level and no PyLint target to run.
 
 ## What the skill does (architecture)
 
