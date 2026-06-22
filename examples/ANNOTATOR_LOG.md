@@ -4,7 +4,7 @@ A narrative record of how the `biomodel-annotator` examples were built, what wen
 what was corrected, and what was learned. This file is the sole README in this directory;
 it covers both the session narrative and the technical specification for the examples.
 
-**Dates:** 2026-06-17 (Sessions 1–3), 2026-06-18 (Session 4 — fresh rerun), 2026-06-19 (Session 5 — Phase 7 rerun)  
+**Dates:** 2026-06-17 (Sessions 1–3), 2026-06-18 (Session 4 — fresh rerun), 2026-06-19 (Session 5 — Phase 7 rerun; Session 6 — Kermack-McKendrick 1927)  
 **Tool:** `biomodel-annotator/0.1` (SKILL.md + CLAUDE.md)  
 **Environment:** Claude Code (claude-sonnet-4-6), Windows 11, project venv at
 `C:\Users\powen\PycharmProjects\MISM\.venv`
@@ -16,6 +16,7 @@ it covers both the session narrative and the technical specification for the exa
 | Directory | Model | Organism | Formalism | SKILL.md passes completed |
 |---|---|---|---|---|
 | `vivarium-chemotaxis/` | vivarium-chemotaxis Multi-Scale E. coli Chemotaxis | *E. coli* K-12 | ODE + Stochastic | 0, 1, 2 (Passes 3, 4 deferred) — Phase 7 rerun 2026-06-19 |
+| `kermack-mckendrick-1927/` | Kermack-McKendrick SIR Epidemic Model (1927 paper) | N/A — organism-agnostic | ODE (compartmental) | 0, 1, 2 (Passes 3, 4 deferred) — 2026-06-19 |
 
 ---
 
@@ -402,3 +403,69 @@ requires programmatic invocation via `Validator().validate()`.
 - `execution.dependencies.runtime` populated ✓
 
 **Validation:** EXIT 0, PASS (2026-06-19T12:00:50Z).
+
+---
+
+## Phase 8 — Kermack-McKendrick 1927 paper annotation (2026-06-19)
+
+At user request: run the Biological Computational Model Annotator workflow for
+"Kermack, W.O. & McKendrick, A.G. (1927). A Contribution to the Mathematical Theory of
+Epidemics." Perform Sections A & B validations; do not proceed to Pass 3.
+
+**Artifact type:** Published paper (no local software repository). This is the first
+example in this session that is not a software repo — the input is a bibliographic citation.
+
+**Passes executed:** 0, 1, 2 (SKILL.md workflow followed in order).
+
+**Source files read:** None locally — content derived from training-data knowledge of the paper
+and BioModels BIOMD0000000018 entry.
+
+**Key annotation decisions:**
+
+| Field | Value | Rationale |
+|---|---|---|
+| `model_class` | `[ordinary differential equation model]` | ODE compartmental paradigm; single-element list (pure-paradigm) |
+| `formalism` | `[ordinary differential equation model]` | Explicit ODEs (1)–(3); same value as model_class for pure ODE |
+| `determinism` | `deterministic` | No stochastic terms |
+| `time_dynamics` | `continuous` | ODEs in continuous time |
+| `spatial` | `non-spatial` | Well-mixed assumption |
+| `multiscale` | `false` | Single population scale |
+| `biology.species` | `[]` | Model is organism-agnostic — deviation from Pass 1 checklist; documented in provenance |
+| `execution.status` | `partially_characterized` | Paper describes equations; no software repository |
+| `execution.language.name` | `SBML` | Canonical artifact is BioModels SBML encoding (BIOMD0000000018) |
+| `execution_type` (registry) | `other` | No standard ExecutionType matches a paper-described ODE model |
+| `source_repository` (registry) | BioModels BIOMD0000000018 URL | Most appropriate computable artifact for registry |
+
+**New finding (Phase 8): Paper-as-artifact pattern.**
+
+When the input artifact is a published paper (not a software repo), three adaptations are needed:
+
+1. `execution.status: "partially_characterized"` — equations are specified but implementation is unspecified.
+2. `execution.language.name`: use the canonical computational format (SBML for BioModels-hosted models) rather than a programming language.
+3. `biology.species: []` is acceptable when the model is explicitly organism-agnostic; document in `provenance.partial_annotation_scope.deferred` with reason "organism-agnostic model" rather than treating it as a mapping failure.
+
+**Pass 1 completeness check:**
+- `model.name` populated ✓
+- `model.model_class` non-empty list; distinct source ✓
+- `model.formalism` non-empty list; distinct source ✓
+- `model_class` and `formalism` backed by separate evidence ✓ (paradigm structure vs. equation form)
+- `model.determinism` = `deterministic` ✓
+- `model.time_dynamics` = `continuous` ✓
+- `model.spatial` = `non-spatial` ✓
+- `model.biology.species` ≥ 1 entry — **N/A** (organism-agnostic; documented in provenance)
+- No email in `model.authors` ✓
+
+**Pass 2 completeness check:**
+- `execution.status` = `partially_characterized` ✓
+- `execution.language.name` = `SBML` ✓
+- `execution.environment_kind` = `native` ✓
+- `execution.entry_points` non-empty ✓
+- `execution.dependencies.runtime` populated ✓
+
+**Validation:** EXIT 0, PASS (2026-06-19T13:17:29Z).
+
+Notable validator findings:
+- `ontology_coverage_pct: null` (eligible=0) → `ontology_coverage_warning: false` ✓ (correct; Pass 4 deferred)
+- `undocumented_dependencies: []` ✓ (no setup.py in artifact directory; deps not checked)
+- `io_slots_constructed: 0` warning (expected; `io: {}` empty stub)
+- `register_model_constructable: true` ✓ (ExecutionType.other accepted by mism_registry)
