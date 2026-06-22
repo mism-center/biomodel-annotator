@@ -16,84 +16,82 @@ provenance: { ... }  # Run metadata
 
 ```yaml
 model:
-  name: { value, source, confidence } #REQUIRED
-  short_description: { value, source, confidence } #REQUIRED
-  long_description: { value, source, confidence } #REQUIRED
-  version: { value, source, confidence } #REQUIRED. probably auto generate
-  doi: {value, source, confidence}     #Optional. We will need DOIs in the future, but may not for POC2.
-  identifier:                          #REQUIRED. Should auto-generate identifier.
-    scheme: "biomodels", "doi", "url", "other"
-    value: ...
-    source: ...
-  model_class:                         #Optional. list, ontology-mapped to MAMO. Length 1 for pure-paradigm models, ≥2 for hybrids (e.g. agent-based + ODE).
-    - value: "agent-based model"
-      iri: "http://identifiers.org/mamo/MAMO_0000028"
-      ontology_label: "agent-based model"
-      ontology: "mamo"
-      mapping_confidence: high
-      source: ...
-      confidence: ...
-  formalism:                           # Optional. list, ontology-mapped to MAMO/KISAO. Each formalism the model uses (ODE, SDE, Boolean, Markov chain, ...). Length 1 for single-paradigm models, ≥2 for hybrids. Paired conceptually with model_class but kept separate because model_class is the modeling *approach* (agent-based, constraint-based) while formalism is the *mathematical machinery* (ODE, SDE). 
-    - value: ...
-      iri: ...
-      ontology_label: ...
-      ontology: "mamo", "kisao"
-      mapping_confidence: ...
-      source: ...
-      confidence: ...
-  determinism: "deterministic", "stochastic", "hybrid", "unknown" #Optional.
-  time_dynamics: "continuous", "discrete", "event-driven", "static", "unknown" #Optional.
-  spatial: "non-spatial", "well-mixed", "compartmental", "1D", "2D", "3D", "lattice", "off-lattice", "unknown" #Optional.
-  multiscale: true | false | unknown #REQUIRED
-  model_scales:                      #REQUIRED. the scale(s) of the model (e.g., "molecular", "cellular", "tissue", "individual", "population"). list
-    - { ... }
+  name: { value, source, confidence } # REQUIRED
+  short_description: { value, source, confidence } # REQUIRED
+  long_description: { value, source, confidence } # REQUIRED
+  version: { value, source, confidence } # REQUIRED
+  external_identifier:                          # REQUIRED
+    scheme: "biomodels", "doi", "url", "other", null  # REQUIRED
+    value: ... # REQUIRED
+    source: ... # REQUIRED
+  model_class:                         # OPTIONAL. list, ontology-mapped to MAMO. Length 1 for pure-paradigm models, ≥2 for hybrids (e.g. agent-based + ODE).
+    - value: "agent-based model" # REQUIRED
+      iri: "http://identifiers.org/mamo/MAMO_0000028" # OPTIONAL
+      ontology_label: "agent-based model" # OPTIONAL
+      ontology: "mamo" # OPTIONAL 
+      mapping_confidence: high # OPTIONAL
+      source: ... # REQUIRED
+      confidence: ... # REQUIRED
+  formalism:                           # OPTIONAL. list, ontology-mapped to MAMO/KISAO. Each formalism the model uses (ODE, SDE, Boolean, Markov chain, ...). Length 1 for single-paradigm models, ≥2 for hybrids. Paired conceptually with model_class but kept separate because model_class is the modeling *approach* (agent-based, constraint-based) while formalism is the *mathematical machinery* (ODE, SDE). 
+    - value: ... # REQUIRED
+      iri: ... # OPTIONAL
+      ontology_label: ... # OPTIONAL
+      ontology: "mamo", "kisao" # OPTIONAL
+      mapping_confidence: ... # OPTIONAL
+      source: ... # REQUIRED
+      confidence: ... # REQUIRED 
+  determinism: "deterministic", "stochastic", "hybrid", "unknown" # OPTIONAL
+  time_dynamics: "continuous", "discrete", "event-driven", "static", "unknown" # OPTIONAL
+  spatial: "non-spatial", "well-mixed", "compartmental", "1D", "2D", "3D", "lattice", "off-lattice", "unknown" # OPTIONAL
+  multiscale: true | false | unknown # REQUIRED
+  model_scales:                      # REQUIRED. the scale(s) of the model (e.g., "molecular", "cellular", "tissue", "individual", "population"). list
+    - { ... } # REQUIRED
   biology:
-    species:                         #Optional. Host or model organism (e.g., "SARS-CoV-2", "HIV-1", "Homo sapiens"). list, ontology-mapped to NCBITaxon
-      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
-    infectious_agent:                #Optional. pathogen or organism of study. list, ontology-mapped to NCBI Taxonomy IDs
-      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
-    health_condition:                 #Optional. mapped to disease or clinical indication. list, ontology mapped to Mondo Disease Ontology (MONDO), Human Phenotype Ontology (HPO), or and Disease Ontology (DOID)
-      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
-    topic_category:                    #Optional. domain-level filtering and support topic-based navigation. list, mapped to EDAM Ontology
-      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
-    cell_types:                        #Optional. list, ontology-mapped to CL
-      - { ... }
-    anatomy:                           #Optional. list, ontology-mapped to UBERON
-      - { ... }
-    biological_processes:              #Optional. list, ontology-mapped to GO
-      - { ... }
-    molecular_entities:                #Optional. list, ontology-mapped to ChEBI; small molecules, ions, drugs
-      - { ... }
-    proteins_genes:                    #Optional. list, free-text + UniProt / Ensembl identifiers when available
-      - { value, identifier: { scheme, value }, source, confidence }
-  authors:                              # who created the model (intellectual authorship). Author identity is separate from how to reach a current maintainer; do not put email here unless the user has no separate contacts block.
-    - name: ... #REQUIRED
-      affiliation: ... #REQUIRED
-      orcid: ...                     #Optional.  # full ORCID URL
-      role: "author", "co-author", "principal investigator", "developer", null #Optional.
-      source: ...            
-  contacts:                             # how to reach someone about the model now — may overlap with authors, may not. Keeps "who wrote it" separate from "who to email about it".
-    - name: ... #REQUIRED
-      role: "corresponding author", "maintainer", "support", "submitter", null #REQUIRED
-      email: ... #REQUIRED
-      affiliation: ... #Optional.
-      source: ...
-  license:
+    species:                         # OPTIONAL. Host or model organism (e.g., "SARS-CoV-2", "HIV-1", "Homo sapiens"). list, ontology-mapped to NCBITaxon
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } #  REQUIRED.
+    infectious_agent:                # OPTIONAL. pathogen or organism of study. list, ontology-mapped to NCBI Taxonomy IDs
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED.
+    health_condition:                 # OPTIONAL. mapped to disease or clinical indication. list, ontology mapped to Mondo Disease Ontology (MONDO), Human Phenotype Ontology (HPO), or and Disease Ontology (DOID)
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED
+    topic_category:                    #OPTIONAL . domain-level filtering and support topic-based navigation. list, mapped to EDAM Ontology
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED
+    biological_processes:              # OPTIONAL. list, ontology-mapped to GO
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED.
+    molecular_entities:                # OPTIONAL. list, ontology-mapped to ChEBI; small molecules, ions, drugs
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED.
+    proteins_genes:                    # OPTIONAL. list, free-text + UniProt / Ensembl identifiers when available
+      - { value, identifier: { scheme, value }, source, confidence } # REQUIRED.
+  authors:                              # REQUIRED. who created the model (intellectual authorship). Author identity is separate from how to reach a current maintainer; do not put email here unless the user has no separate contacts block.
+    - name: ... # REQUIRED
+      affiliation: ... # REQUIRED
+      orcid: ...                     # OPTIONAL.  # full ORCID URL
+      role: "author", "co-author", "principal investigator", "developer", null # OPTIONAL.
+      source: ... # REQUIRED        
+  contacts:                             # REQUIRED. how to reach someone about the model now — may overlap with authors, may not. Keeps "who wrote it" separate from "who to email about it".
+    - name: ... # REQUIRED
+      role: "corresponding author", "maintainer", "support", "submitter", null # REQUIRED
+      email: ... # REQUIRED
+      affiliation: ... # REQUIRED
+      source: ... # REQUIRED
+  license: # REQUIRED
     spdx_id: "MIT", "Apache-2.0", "GPL-3.0-or-later" , ... #REQUIRED
-    source: ...
-    confidence: ...
-  publications:                          # papers, preprints
-    - title: ...
-      doi: ...
-      pmid: ...
-      url: ...
-      source: ...
-  related_resources:                   # data, prior models the curators want linked
-    - qualifier: "bqmodel:isDerivedFrom", "bqbiol:isVersionOf", ...
-      identifier: { scheme, value }
-      source: ...
-  funding:                             #Grant numbers or funding acknowledgments (e.g., "NIAID U19 AI123456").
-    -acknowledgement: ...
+    source: ... # REQUIRED 
+    confidence: ... # REQUIRED 
+  publications:                          # REQUIRED. papers, preprints
+    - title: ...  # REQUIRED
+      doi: ...  # OPTIONAL 
+      pmid: ... # OPTIONAL 
+      url: ...  # REQUIRED
+      source: ... # REQUIRED
+  related_resources:                   # OPTIONAL. data, prior models the curators want linked
+    - qualifier: "bqmodel:isDerivedFrom", "bqbiol:isVersionOf", ... # REQUIRED 
+      identifier: { scheme, value } # REQUIRED 
+      source: ... # REQUIRED
+  funding:                             # OPTIONAL. Grant numbers or funding acknowledgments (e.g., "NIAID U19 AI123456").
+    - funding_organization:  ...   # REQUIRED 
+      grant_number: ... # REQUIRED 
+      acknowledgment: .... # REQUIRED
+
   
   
 ```
