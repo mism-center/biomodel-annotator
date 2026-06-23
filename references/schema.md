@@ -1,15 +1,47 @@
-# Annotation YAML Schema
+# Annotation Package Schema
 
-The output of the `biomodel-annotator` skill. Every leaf value field carries `value`, `source`, and `confidence` siblings unless noted. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, and `mapping_confidence`.
+The output of the `biomodel-annotator` skill is an **annotation package**: a directory named `metadata-package/`, written **inside the model's own directory** (the repo/folder being annotated), holding three files. Every leaf value field carries `value`, `source`, and `confidence` siblings unless noted. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, and `mapping_confidence`.
 
-## Top-level structure
+## Package layout
+
+```
+<model-dir>/
+  metadata-package/
+    metadata.yaml    # schema_version + model (Section A) + provenance (identity/ontology bits)
+    execution.yaml   # schema_version + execution (Section B) + io (Section C) + provenance (validation bits)
+    README.md        # human-readable model-card summary; not validated
+```
+
+The four logical sections below (`model`, `execution`, `io`, `provenance`) are the field definitions; they are **distributed across the two YAML files** as shown. `provenance` is split: the identity/ontology sub-blocks live in `metadata.yaml`, the `validation` result lives in `execution.yaml`, and a small run-stamp (`annotated_at`, `annotated_by`, `source_root`, `human_review_required`) is repeated in both so each file stands alone.
+
+### metadata.yaml
 
 ```yaml
 schema_version: "0.1"
-model: { ... }       # Section A
-execution: { ... }   # Section B
-io: { ... }          # Section C
-provenance: { ... }  # Run metadata
+model: { ... }        # Section A — see below
+provenance:           # identity/ontology subset (see provenance below)
+  annotated_at: ...
+  annotated_by: ...
+  source_root: ...
+  files_inspected: [ ... ]
+  ontology_lookups: { ... }
+  unmapped_fields: [ ... ]
+  partial_annotation_scope: { ... }
+  human_review_required: true
+```
+
+### execution.yaml
+
+```yaml
+schema_version: "0.1"
+execution: { ... }    # Section B — see below
+io: { ... }           # Section C — see below
+provenance:           # validation subset (see provenance below)
+  annotated_at: ...
+  annotated_by: ...
+  source_root: ...
+  validation: { ... }
+  human_review_required: true
 ```
 
 ## Section A — `model`
@@ -100,17 +132,17 @@ model:
 
 ```yaml
 execution:
-  status: "characterized" | "partially_characterized" | "not_determined"
-  language:                            # ontology-mapped to SWO if possible
-    name: "Python" | "Julia" | "R" | "MATLAB" | "C++" | ...
+  status: "characterized" | "partially_characterized" | "not_determined"  # REQUIRED
+  language:                            # REQUIRED (sub-field `name` required). ontology-mapped to SWO if possible
+    name: "Python" | "Julia" | "R" | "MATLAB" | "C++" | ...  # REQUIRED
     version_constraint: ">=3.10,<3.13"
     iri: ...
     ontology: "swo"
     source: ...
-  environment_kind:                    # ontology-mapped to EDAM operation/format where it fits, else free
+  environment_kind:                    # REQUIRED. ontology-mapped to EDAM operation/format where it fits, else free
     value: "conda" | "pip" | "docker" | "singularity" | "nextflow" | "snakemake" | "jupyter" | "native"
     source: ...
-  dependencies:
+  dependencies:                        # OPTIONAL
     runtime:                           # Python pip / Julia / R / etc.
       - name: "numpy"
         version_constraint: ">=1.24"
@@ -119,18 +151,18 @@ execution:
       - { name, version_constraint, group, source }
     system:                            # apt-get, brew, OS-level libs (BLAS, MPI, CUDA toolkit)
       - { name, version_constraint, source }
-  containers:
+  containers:                          # OPTIONAL
     - kind: "docker" | "singularity"
       file: "Dockerfile" | "container.def"
       image_name: ...
       source: ...
-  compute:
+  compute:                             # OPTIONAL
     cpu_cores: { value, source, confidence }      # use null if not stated
     memory_gb: { value, source, confidence }
     gpu_required: { value, source, confidence }   # boolean
     parallelism: "single" | "multi-thread" | "multi-process" | "MPI" | "GPU" | "distributed"
     typical_runtime: { value, unit, source, confidence }  # e.g. "minutes", "hours"
-  entry_points:                        # one entry per command the user might invoke
+  entry_points:                        # REQUIRED (non-empty list). one entry per command the user might invoke
     - command: "python -m vivarium_chemotaxis.experiments.run_chemotaxis"
       purpose: "Run the main chemotaxis experiment"
       arguments:                       # capture if README documents them
@@ -138,11 +170,11 @@ execution:
           description: "Simulation duration in seconds"
           default: 10.0
       source: "README.md:120"
-  tests:
+  tests:                               # OPTIONAL
     framework: "pytest" | "unittest" | "Test.jl" | ...
     invocation: "pytest tests/"
     source: ...
-  notes: ...                           # free text for anything that doesn't fit
+  notes: ...                           # OPTIONAL. free text for anything that doesn't fit
 ```
 
 ## Section C — `io`
@@ -209,6 +241,10 @@ provenance:
     - "README.md"
     - "pyproject.toml"
     - "vivarium_chemotaxis/experiments/run_chemotaxis.py"
+  validation:                            # REQUIRED. result of the final Sections A & B validation gate (scripts/validate.py)
+    method: "cli" | "manual"             # "cli" = ran scripts/validate.py; "manual" = checked by hand against schema.md REQUIRED list
+    status: "pass" | "fail"              # final status when the annotation was written (should be "pass")
+    flagged_fields: []                   # field paths the gate reported missing/empty and you then fixed; empty list if clean first pass
   ontology_lookups:
     service: "EBI OLS via ols-ontology MCP"
     embedding_models_available: ["llama-embed-nemotron-8b_pca512", "..."]  # what listEmbeddingModels returned this run

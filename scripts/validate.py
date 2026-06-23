@@ -1,8 +1,23 @@
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#   "pyyaml>=6,<7",
+# ]
+# ///
 """
 Annotation Validator
 
 Runs structural, semantic, and registry compatibility checks on the produced
 metadata.yaml, execution.yaml, and full annotation YAML. Writes validation_report.json.
+
+Bundled skill script — run as the final validation gate in Assembly, on the
+written annotation package (the metadata-package/ dir inside the model repo,
+holding metadata.yaml + execution.yaml):
+
+    uv run scripts/validate.py --package <repo>/metadata-package --input-path <repo>
+
+(`uv run` resolves the PyYAML dependency inline — no install step, no MCP server.
+Fallback if uv is unavailable: `python3 scripts/validate.py ...` with PyYAML present.)
 
 Exit code rules:
     0 — all required fields present, execution_command verified, registry check passed
@@ -36,18 +51,24 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Fields required in annotation['model'] (Section A).
+# Mirrors the REQUIRED markers in references/schema.md (schema.md is the source of
+# truth — keep these in sync; see CLAUDE.md "Cross-file consistency").
 # kind values:
-#   "scalar"   — envelope {value, source, confidence}; value must be non-empty
+#   "scalar"   — envelope {value, source, confidence} or bare scalar; value must be non-empty
 #   "list"     — must be a non-empty list
-#   "dict:KEY" — must be a dict whose KEY sub-field is present
+#   "dict:KEY" — must be a dict whose KEY sub-field is present and non-null
 REQUIRED_SECTION_A: list[tuple[str, str]] = [
-    ("name",             "scalar"),
-    ("short_description","scalar"),
-    ("model_class",      "list"),
-    ("formalism",        "list"),
-    ("determinism",      "scalar"),
-    ("time_dynamics",    "scalar"),
-    ("spatial",          "scalar"),
+    ("name",                "scalar"),
+    ("short_description",   "scalar"),
+    ("long_description",    "scalar"),
+    ("version",             "scalar"),
+    ("external_identifier", "dict:value"),
+    ("multiscale",          "scalar"),
+    ("model_scales",        "list"),
+    ("authors",             "list"),
+    ("contacts",            "list"),
+    ("license",             "dict:spdx_id"),
+    ("publications",        "list"),
 ]
 
 # Fields required in annotation['execution'] (Section B).
@@ -564,17 +585,28 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
     parser = argparse.ArgumentParser(
+        prog="validate.py",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            "Validate Section A (model) and Section B (execution) of an annotation YAML. "
-            "Intended to be run after Pass 1 and Pass 2 of the biomodel-annotator skill, "
-            "before Pass 3 begins. Exits 0 on pass, 1 on failure."
-        )
+            "Validate Section A (model) and Section B (execution) of an annotation\n"
+            "package against the REQUIRED fields in references/schema.md. Run as the\n"
+            "final gate in Assembly, on the written package, before presenting it.\n\n"
+            "The package is a directory holding metadata.yaml (model + provenance) and\n"
+            "execution.yaml (execution + io + provenance); the two are reconstructed\n"
+            "into one annotation in memory and checked together.\n\n"
+            "Exit codes:\n"
+            "  0  pass  — all REQUIRED Section A & B fields present and non-empty\n"
+            "  1  fail  — a REQUIRED field is missing or empty (details in stdout JSON)\n"
+            "  2  usage — bad args, missing file, or unparseable YAML\n\n"
+            "Example:\n"
+            "  uv run scripts/validate.py --package ./mymodel/metadata-package --input-path ./mymodel"
+        ),
     )
     parser.add_argument(
-        "--annotation",
+        "--package",
         required=True,
-        metavar="FILE",
-        help="Path to the (partial) annotation YAML file.",
+        metavar="DIR",
+        help="Annotation package directory (contains metadata.yaml + execution.yaml).",
     )
     parser.add_argument(
         "--input-path",
@@ -584,10 +616,32 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    annotation_text = Path(args.annotation).read_text(encoding="utf-8")
-    v = Validator(input_path=Path(args.input_path))
-    annotation = _safe_parse_yaml(annotation_text, args.annotation)
+    pkg = Path(args.package)
+    try:
+        metadata_text = (pkg / "metadata.yaml").read_text(encoding="utf-8")
+        execution_text = (pkg / "execution.yaml").read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"usage error: cannot read package file: {exc}", file=sys.stderr)
+        sys.exit(2)
 
+    metadata = _safe_parse_yaml(metadata_text, "metadata.yaml")
+    execution = _safe_parse_yaml(execution_text, "execution.yaml")
+    if metadata is None or execution is None:
+        print("usage error: metadata.yaml or execution.yaml is empty or not valid YAML", file=sys.stderr)
+        sys.exit(2)
+
+    # Reconstruct the combined annotation the structural check expects.
+    # provenance is split across both files; shallow-merge them — the run-stamp keys
+    # they share carry identical values, so last-wins is safe. ponytail: shallow merge,
+    # deep-merge only if a sub-block is ever split key-wise across both files.
+    annotation = {
+        "model": metadata.get("model"),
+        "execution": execution.get("execution"),
+        "io": execution.get("io"),
+        "provenance": {**(metadata.get("provenance") or {}), **(execution.get("provenance") or {})},
+    }
+
+    v = Validator(input_path=Path(args.input_path))
     result = v._check_structural(None, None, annotation)
 
     print(json.dumps(result, indent=2))
