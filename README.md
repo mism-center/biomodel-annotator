@@ -1,10 +1,10 @@
 # biomodel-annotator
 
-A Claude Code **skill** that turns a biological/biomedical computational model — a repo, a folder, a single SBML/CellML/BNGL/etc. file, or a GitHub URL — into a single MIRIAM-aligned YAML annotation with ontology IRIs already attached.
+A Claude Code **skill** that turns a biological/biomedical computational model — a repo, a folder, a single SBML/CellML/BNGL/etc. file, or a GitHub URL — into a MIRIAM-aligned **annotation package** (a `metadata-package/` folder of YAML + a README) with ontology IRIs already attached.
 
 The output is a starting point for a human curator: every field carries a `confidence` and `source`, and every ontology-eligible term carries `mapping_confidence` plus the queries that were tried.
 
-See [`SKILL.md`](SKILL.md) for the full workflow and [`references/schema.md`](references/schema.md) for the YAML schema this skill emits.
+See [`SKILL.md`](SKILL.md) for the full workflow and [`references/schema.md`](references/schema.md) for the package schema this skill emits.
 
 ---
 
@@ -21,12 +21,12 @@ Each skill is a directory whose root contains a `SKILL.md` file.
 
 ### 2. Validator script (required for the Sections A & B validation gate)
 
-As the final step before presenting the annotation, the skill runs the bundled script `scripts/validate.py` on the written file, checking the `model:` and `execution:` sections against the REQUIRED fields for Sections A and B in `references/schema.md`. No MCP server, no install step.
+As the final step before presenting the annotation, the skill runs the bundled script `scripts/validate.py` on the written package (the `metadata-package/` dir), checking the `model:` and `execution:` sections — reconstructed from `metadata.yaml` + `execution.yaml` — against the REQUIRED fields for Sections A and B in `references/schema.md`. No MCP server, no install step.
 
 The script declares its one dependency (PyYAML) inline via [PEP 723](https://peps.python.org/pep-0723/), so [`uv`](https://docs.astral.sh/uv/) resolves it at run time:
 
 ```bash
-uv run scripts/validate.py --annotation <partial-annotation.yaml> --input-path <model-repo-root>
+uv run scripts/validate.py --package <model-repo-root>/metadata-package --input-path <model-repo-root>
 ```
 
 It prints a JSON result to stdout and sets its exit code: `0` pass, `1` fail (with the offending field paths), `2` usage error. This is a hard gate — on exit 1 the skill goes back, fixes the flagged fields from the sources, and re-runs until it exits 0; it never presents a failing annotation.
@@ -35,7 +35,7 @@ If `uv` is unavailable, run it on any Python 3.9+ interpreter that has PyYAML in
 
 ```bash
 pip install pyyaml
-python3 scripts/validate.py --annotation <partial-annotation.yaml>
+python3 scripts/validate.py --package <model-repo-root>/metadata-package
 ```
 
 ### 3. OLS MCP server (required for Pass 4 — ontology mapping)

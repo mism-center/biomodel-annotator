@@ -1,15 +1,47 @@
-# Annotation YAML Schema
+# Annotation Package Schema
 
-The output of the `biomodel-annotator` skill. Every leaf value field carries `value`, `source`, and `confidence` siblings unless noted. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, and `mapping_confidence`.
+The output of the `biomodel-annotator` skill is an **annotation package**: a directory named `metadata-package/`, written **inside the model's own directory** (the repo/folder being annotated), holding three files. Every leaf value field carries `value`, `source`, and `confidence` siblings unless noted. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, and `mapping_confidence`.
 
-## Top-level structure
+## Package layout
+
+```
+<model-dir>/
+  metadata-package/
+    metadata.yaml    # schema_version + model (Section A) + provenance (identity/ontology bits)
+    execution.yaml   # schema_version + execution (Section B) + io (Section C) + provenance (validation bits)
+    README.md        # human-readable model-card summary; not validated
+```
+
+The four logical sections below (`model`, `execution`, `io`, `provenance`) are the field definitions; they are **distributed across the two YAML files** as shown. `provenance` is split: the identity/ontology sub-blocks live in `metadata.yaml`, the `validation` result lives in `execution.yaml`, and a small run-stamp (`annotated_at`, `annotated_by`, `source_root`, `human_review_required`) is repeated in both so each file stands alone.
+
+### metadata.yaml
 
 ```yaml
 schema_version: "0.1"
-model: { ... }       # Section A
-execution: { ... }   # Section B
-io: { ... }          # Section C
-provenance: { ... }  # Run metadata
+model: { ... }        # Section A — see below
+provenance:           # identity/ontology subset (see provenance below)
+  annotated_at: ...
+  annotated_by: ...
+  source_root: ...
+  files_inspected: [ ... ]
+  ontology_lookups: { ... }
+  unmapped_fields: [ ... ]
+  partial_annotation_scope: { ... }
+  human_review_required: true
+```
+
+### execution.yaml
+
+```yaml
+schema_version: "0.1"
+execution: { ... }    # Section B — see below
+io: { ... }           # Section C — see below
+provenance:           # validation subset (see provenance below)
+  annotated_at: ...
+  annotated_by: ...
+  source_root: ...
+  validation: { ... }
+  human_review_required: true
 ```
 
 ## Section A — `model`

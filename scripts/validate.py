@@ -10,9 +10,11 @@ Annotation Validator
 Runs structural, semantic, and registry compatibility checks on the produced
 metadata.yaml, execution.yaml, and full annotation YAML. Writes validation_report.json.
 
-Bundled skill script — run at the validation checkpoint between Pass 2 and Pass 3:
+Bundled skill script — run as the final validation gate in Assembly, on the
+written annotation package (the metadata-package/ dir inside the model repo,
+holding metadata.yaml + execution.yaml):
 
-    uv run scripts/validate.py --annotation <file> --input-path <repo>
+    uv run scripts/validate.py --package <repo>/metadata-package --input-path <repo>
 
 (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server.
 Fallback if uv is unavailable: `python3 scripts/validate.py ...` with PyYAML present.)
@@ -586,22 +588,25 @@ if __name__ == "__main__":
         prog="validate.py",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            "Validate Section A (model) and Section B (execution) of an annotation YAML\n"
-            "against the REQUIRED fields in references/schema.md. Run after Pass 1 and\n"
-            "Pass 2 of the biomodel-annotator skill, before Pass 3 begins.\n\n"
+            "Validate Section A (model) and Section B (execution) of an annotation\n"
+            "package against the REQUIRED fields in references/schema.md. Run as the\n"
+            "final gate in Assembly, on the written package, before presenting it.\n\n"
+            "The package is a directory holding metadata.yaml (model + provenance) and\n"
+            "execution.yaml (execution + io + provenance); the two are reconstructed\n"
+            "into one annotation in memory and checked together.\n\n"
             "Exit codes:\n"
             "  0  pass  — all REQUIRED Section A & B fields present and non-empty\n"
             "  1  fail  — a REQUIRED field is missing or empty (details in stdout JSON)\n"
-            "  2  usage — bad args, unreadable file, or unparseable YAML\n\n"
+            "  2  usage — bad args, missing file, or unparseable YAML\n\n"
             "Example:\n"
-            "  uv run scripts/validate.py --annotation mymodel.annotation.yaml --input-path ./mymodel"
+            "  uv run scripts/validate.py --package ./mymodel/metadata-package --input-path ./mymodel"
         ),
     )
     parser.add_argument(
-        "--annotation",
+        "--package",
         required=True,
-        metavar="FILE",
-        help="Path to the (partial) annotation YAML file.",
+        metavar="DIR",
+        help="Annotation package directory (contains metadata.yaml + execution.yaml).",
     )
     parser.add_argument(
         "--input-path",
@@ -611,10 +616,32 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    annotation_text = Path(args.annotation).read_text(encoding="utf-8")
-    v = Validator(input_path=Path(args.input_path))
-    annotation = _safe_parse_yaml(annotation_text, args.annotation)
+    pkg = Path(args.package)
+    try:
+        metadata_text = (pkg / "metadata.yaml").read_text(encoding="utf-8")
+        execution_text = (pkg / "execution.yaml").read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"usage error: cannot read package file: {exc}", file=sys.stderr)
+        sys.exit(2)
 
+    metadata = _safe_parse_yaml(metadata_text, "metadata.yaml")
+    execution = _safe_parse_yaml(execution_text, "execution.yaml")
+    if metadata is None or execution is None:
+        print("usage error: metadata.yaml or execution.yaml is empty or not valid YAML", file=sys.stderr)
+        sys.exit(2)
+
+    # Reconstruct the combined annotation the structural check expects.
+    # provenance is split across both files; shallow-merge them — the run-stamp keys
+    # they share carry identical values, so last-wins is safe. ponytail: shallow merge,
+    # deep-merge only if a sub-block is ever split key-wise across both files.
+    annotation = {
+        "model": metadata.get("model"),
+        "execution": execution.get("execution"),
+        "io": execution.get("io"),
+        "provenance": {**(metadata.get("provenance") or {}), **(execution.get("provenance") or {})},
+    }
+
+    v = Validator(input_path=Path(args.input_path))
     result = v._check_structural(None, None, annotation)
 
     print(json.dumps(result, indent=2))
