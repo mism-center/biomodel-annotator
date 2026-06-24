@@ -8,7 +8,7 @@
 Annotation Validator
 
 CLI: structural-only check (Sections A & B required fields) on the written
-annotation package (metadata-package-na1-nx3-nx2-nx1/ dir holding metadata.yaml + execution.yaml).
+annotation package (metadata-package/ dir holding metadata.yaml + execution.yaml).
 Prints a JSON result to stdout; exits 0 pass / 1 fail / 2 usage error.
 
 Semantic checks (entry-point path verification, ontology coverage, dependency
@@ -17,7 +17,7 @@ Validator.validate() but are NOT run by the CLI.
 
 Bundled skill script — run as the final validation gate in Assembly:
 
-    uv run scripts/validate.py --package <repo>/metadata-package-na1-nx3-nx2-nx1 --input-path <repo>
+    uv run scripts/validate.py --package <repo>/metadata-package --input-path <repo>
 
 (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server.
 Fallback if uv is unavailable: `python3 scripts/validate.py ...` with PyYAML present.)
@@ -86,11 +86,12 @@ REQUIRED_SECTION_B: list[tuple[str, str]] = [
 _ONTOLOGY_ELIGIBLE_PATHS = [
     "model.model_class",
     "model.formalism",
-    "model.biology.organisms",
+    "model.biology.species",
+    "model.biology.infectious_agent",
+    "model.biology.health_condition",
+    "model.biology.topic_category",
     "model.biology.biological_processes",
     "model.biology.molecular_entities",
-    "model.biology.cell_types",
-    "model.biology.anatomy",
     "execution.language",
 ]
 
@@ -667,7 +668,7 @@ if __name__ == "__main__":
             "  1  fail  — a REQUIRED field is missing or empty (details in stdout JSON)\n"
             "  2  usage — bad args, missing file, or unparseable YAML\n\n"
             "Example:\n"
-            "  uv run scripts/validate.py --package ./mymodel/metadata-package-na1-nx3-nx2-nx1 --input-path ./mymodel"
+            "  uv run scripts/validate.py --package ./mymodel/metadata-package --input-path ./mymodel"
         ),
     )
     parser.add_argument(
