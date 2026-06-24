@@ -26,7 +26,7 @@ As the final step before presenting the annotation, the skill runs the bundled s
 The script declares its one dependency (PyYAML) inline via [PEP 723](https://peps.python.org/pep-0723/), so [`uv`](https://docs.astral.sh/uv/) resolves it at run time:
 
 ```bash
-uv run scripts/validate.py --package <model-repo-root>/metadata-package --input-path <model-repo-root>
+uv run scripts/validate.py --package <model-repo-root>/metadata-package-na1-nx3-nx2-nx1 --input-path <model-repo-root>
 ```
 
 It prints a JSON result to stdout and sets its exit code: `0` pass, `1` fail (with the offending field paths), `2` usage error. This is a hard gate — on exit 1 the skill goes back, fixes the flagged fields from the sources, and re-runs until it exits 0; it never presents a failing annotation.
@@ -35,7 +35,7 @@ If `uv` is unavailable, run it on any Python 3.9+ interpreter that has PyYAML in
 
 ```bash
 pip install pyyaml
-python3 scripts/validate.py --package <model-repo-root>/metadata-package
+python3 scripts/validate.py --package <model-repo-root>/metadata-package-na1-nx3-nx2-nx1
 ```
 
 ### 3. OLS MCP server (required for Pass 4 — ontology mapping)
@@ -107,7 +107,7 @@ cd .claude/skills
 unzip /path/to/biomodel-annotator-vX.Y.Z.zip
 ```
 
-Restart your Claude Code session (or open a new one) so the skill is picked up. The release zip contains **only** `SKILL.md` and the two `references/*.md` files — nothing else — so it will not bloat the agent context with unrelated repo files.
+Restart your Claude Code session (or open a new one) so the skill is picked up. The release zip contains `SKILL.md`, the two `references/*.md` files, and `scripts/validate.py` (the bundled structural validator). Nothing else ships.
 
 ---
 
@@ -130,20 +130,24 @@ Inputs accepted: a local folder path, a GitHub URL, or a single model file (e.g.
 
 ### Output
 
-One file, written to the working directory:
+An **annotation package** — a directory named `metadata-package/`, written **inside the model's own directory** (not the working directory) — containing three files:
 
 ```
-<model-slug>.annotation.yaml
+<model-dir>/
+  metadata-package/
+    metadata.yaml    # model identity, biology, authorship, references + provenance (ontology half)
+    execution.yaml   # execution environment, IO, validation result + provenance (validation half)
+    README.md        # human-readable model-card summary
 ```
 
-Top-level sections:
+The four logical sections are split across the two YAML files:
 
-| Section | Contents |
-|---|---|
-| `model` | Identity, biology, authors, contacts, license, references |
-| `execution` | Language, deps, container, compute, entry points, tests |
-| `io` | Parameters, initial conditions, data inputs, outputs |
-| `provenance` | Annotation run metadata, OLS lookups, unmapped fields, deferred scope |
+| Section | File | Contents |
+|---|---|---|
+| `model` | `metadata.yaml` | Identity, biology, authors, contacts, license, references |
+| `execution` | `execution.yaml` | Language, deps, container, compute, entry points, tests |
+| `io` | `execution.yaml` | Parameters, initial conditions, data inputs, outputs |
+| `provenance` | both (split) | Annotation run metadata, OLS lookups, unmapped fields, validation result |
 
 Every leaf field carries `value` + `source` + `confidence`. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, `mapping_confidence`. See [`references/schema.md`](references/schema.md) for the full schema and [`references/ontologies.md`](references/ontologies.md) for the per-field ontology routing.
 
