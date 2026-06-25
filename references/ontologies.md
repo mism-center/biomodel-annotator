@@ -34,7 +34,7 @@ Accept the top hit only when its label matches the input term closely (case-inse
 |---|---|---|---|
 | `model_class` | MAMO — Mathematical Modelling Ontology | `mamo` | "agent-based model", "ordinary differential equation model", "constraint-based model", "Boolean network model", "stochastic model". |
 | `formalism` | MAMO + KISAO | `mamo`, `kisao` | KISAO is mostly *algorithms* (Gillespie, CVODE) but also includes formalisms. Try MAMO first for the formalism, KISAO for the solver. |
-| `biology.organisms` | NCBI Taxonomy | `ncbitaxon` | Use scientific name when possible ("Escherichia coli", not "E. coli"). |
+| `biology.species` | NCBI Taxonomy | `ncbitaxon` | Use scientific name when possible ("Escherichia coli", not "E. coli"). |
 | `biology.cell_types` | Cell Ontology | `cl` | E.g. "neuron", "hepatocyte". |
 | `biology.anatomy` | Uberon | `uberon` | Tissues, organs, anatomical regions. |
 | `biology.biological_processes` | Gene Ontology — Biological Process | `go` | "chemotaxis", "signal transduction", "glycolysis". Filter to BP namespace if the search returns molecular function or cellular component instead. |

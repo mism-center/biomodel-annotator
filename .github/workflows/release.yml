@@ -53,6 +53,22 @@ jobs:
           echo "version_bare=${new#v}" >> "$GITHUB_OUTPUT"
           echo "bump=$bump" >> "$GITHUB_OUTPUT"
 
+      - name: Lint schema/ontologies field-name consistency
+        run: |
+          set -euo pipefail
+          # Ensure the biology field name used in schema.md ('biology.species') matches
+          # what ontologies.md references.  This catches renames that break the agent's
+          # output consistency (the species/organisms drift seen in metadata-package-3).
+          if grep -qE 'biology\.organisms' references/ontologies.md; then
+            echo "ERROR: references/ontologies.md uses 'biology.organisms' but schema.md uses 'biology.species'. Update ontologies.md."
+            exit 1
+          fi
+          if ! grep -qE 'biology\.species' references/ontologies.md; then
+            echo "ERROR: references/ontologies.md does not reference 'biology.species'. Add it to the routing table."
+            exit 1
+          fi
+          echo "Schema/ontologies consistency check passed."
+
       - name: Build skill zip (strict allowlist)
         id: pack
         run: |

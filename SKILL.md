@@ -43,6 +43,8 @@ If the user gives you nothing, ask once for one of these.
 
 The workflow is four passes plus assembly. **Do not start writing the package until you finish all four passes** — earlier passes inform later ones (e.g. knowing the model is a stochastic ABM changes how you describe inputs).
 
+**Extraction discipline (Passes 0–3).** These passes are extraction tasks, not creative generation. Copy values verbatim from source files wherever possible — do not paraphrase or rephrase. Prefer `confidence: high` over `confidence: inferred` whenever the source text is explicit. Only use `confidence: inferred` when you are reading between the lines of the source.
+
 ### Pass 0 — Inventory
 
 Before reading anything in depth, get the lay of the land:
@@ -58,11 +60,29 @@ Write a brief inventory note to yourself (mental or scratch). You'll cite specif
 Read the README first; it's where authors put the high-level pitch. Then skim the top of the main module / entry script. You're looking for:
 
 - **Name**, **short description**, **long description**.
-- **Model class(es)**: pick from agent-based / ODE / PDE / stochastic (Gillespie, tau-leaping) / constraint-based (FBA) / boolean / rule-based / Markov chain. Map to MAMO later. The field is a **list** — if the model genuinely combines paradigms (e.g. agent-based agents whose internal state evolves under ODEs), record both. The label "hybrid" by itself is not a class; emit the component classes and let the multi-element list speak for itself.
-- **Formalism(s)**: the mathematical machinery the model uses (ODE, SDE, PDE, difference equation, discrete-event, Markov chain). Also a list. Distinct from model_class — `model_class` is the modeling *approach* (agent-based, constraint-based); `formalism` is the *math* (an agent-based model may still use ODEs internally). For pure-paradigm models the list will have one element.
+- **Model class(es)**: the modeling *approach* — use only values from the `model_class[]` closed vocabulary below. The field is a **list** — if the model genuinely combines paradigms (e.g. agent-based agents whose internal state evolves under ODEs), record both. The label "hybrid" by itself is not a class; emit the component classes and let the multi-element list speak for itself. Map to MAMO in Pass 4.
+- **Formalism(s)**: the *mathematical machinery* the model uses — distinct from model_class (`model_class` is the approach; `formalism` is the math). Also a list; use only values from the `formalism[]` closed vocabulary below. For pure-paradigm models the list will have one element.
 - **Biological scope**: organism(s), cell type(s), tissue/anatomy, biological process(es), molecules involved. Map to NCBITaxon, CL, UBERON, GO, ChEBI.
-- **Spatial/temporal characteristics**: deterministic vs stochastic, continuous vs discrete time, dimensionality, spatial scale.
-- **Authorship and contacts (two separate fields).** `authors` records who *created* the model (intellectual contribution): name, affiliation, ORCID, role. `contacts` records who to *reach* about the model now: corresponding author, current maintainer, support address. The two lists can overlap or not — don't conflate them. Put email addresses only in `contacts`, not `authors`. Sources to check, in order: `CITATION.cff` (has both fields explicitly), `pyproject.toml` / `setup.py` (authors and maintainers separately), README author/contact blocks, git log (last-resort fallback for maintainer only).
+- **Spatial/temporal characteristics**: deterministic vs stochastic, continuous vs discrete time, dimensionality, spatial scale. Use only the values from the closed vocabularies below — do not invent synonyms or variant spellings.
+
+  | Field | Allowed values |
+  |---|---|
+  | `model_class[]` | `agent-based model` \| `ordinary differential equation model` \| `partial differential equation model` \| `stochastic model` \| `constraint-based model` \| `Boolean network model` \| `rule-based model` \| `Markov chain model` \| `multi-scale model` |
+  | `formalism[]` | `ODE` \| `SDE` \| `PDE` \| `Boolean` \| `Markov chain` \| `rule-based` \| `discrete-event` \| `stochastic` \| `agent-based` |
+  | `determinism` | `deterministic` \| `stochastic` \| `hybrid` \| `unknown` |
+  | `time_dynamics` | `continuous` \| `discrete` \| `event-driven` \| `static` \| `unknown` |
+  | `spatial` | `non-spatial` \| `well-mixed` \| `compartmental` \| `1D` \| `2D` \| `3D` \| `lattice` \| `off-lattice` \| `unknown` |
+  | `model_scales[]` | `molecular` \| `cellular` \| `tissue` \| `individual` \| `population` |
+
+  **`time_dynamics` tiebreaker — `discrete` vs `event-driven`:** Use `discrete` when the framework advances by a fixed timestep (e.g. Vivarium, NetLogo, Mesa). Use `event-driven` only for true event-queue simulators that advance time to the next scheduled event (e.g. NEURON, SimPy, NEST). When in doubt for fixed-timestep frameworks, prefer `discrete`.
+
+  **Fields that must always be emitted** — even when no evidence exists, use `null` for scalars and `[]` for lists: `model_class`, `formalism`, `determinism`, `time_dynamics`, `spatial`, `biology`. Do not omit these keys. A missing key is indistinguishable from a forgotten one.
+
+  **Note on `multiscale`:** this is a bare `true`/`false`/`unknown` scalar — it does **not** use a `{value, source, confidence}` envelope. It is the only field in Section A that works this way.
+
+  **Note on `model_scales` items:** even though the allowed values are a closed vocabulary (see table above), each list entry still uses the standard `{value, source, confidence}` envelope — not a bare string.
+
+- **Authorship and contacts (two separate fields).** `authors` records who *created* the model (intellectual contribution): name, affiliation, ORCID, role. `contacts` records who to *reach* about the model now: corresponding author, current maintainer, support address. The two lists can overlap or not — don't conflate them. Put email addresses only in `contacts`, not `authors`. Sources to check, in order: `CITATION.cff` (has both fields explicitly), `pyproject.toml` / `setup.py` (authors and maintainers separately), README author/contact blocks, git log (last-resort fallback for maintainer only). **Only add an entry to `contacts` when you found the person's email address verbatim in a source file — do not construct or infer email addresses.**
 - **License**: from `LICENSE` file or metadata config. Use SPDX identifiers.
 - **Publications / references**: DOIs in README or `CITATION.cff`. Capture as PubMed/DOI identifiers.
 - **Version**: from `__version__`, `pyproject.toml`, `package.json`, or git tags.
@@ -146,7 +166,7 @@ Once all four passes are done:
 
    (Important: Try `uv` first, if `uv` is unavailable, fall back to `python3 "$SKILL_DIR/scripts/validate.py" --package <model-repo-root>/metadata-package` with PyYAML installed.) It reconstructs the `model:` and `execution:` sections from the two files, checks them against the REQUIRED fields in `references/schema.md`, prints a JSON result to stdout, and sets its exit code:
 
-   - **Exit 0 (`status: "pass"`):** record `provenance.validation` (method `cli`, `status: pass`, `flagged_fields: []`) **in `execution.yaml`** and proceed to step 5.
+   - **Exit 0 (`status: "pass"`):** overwrite `provenance.validation` **in `execution.yaml`** with `{method: "cli", status: "pass", flagged_fields: []}` — this must be a populated mapping, not an empty `{}`. Then proceed to step 5.
    - **Exit 1 (`status: "fail"`):** this is an instruction to go back and fix, not a reason to stop. The `missing_required_fields` and `empty_required_fields` lists name every field needing attention by path (e.g. `"model.name"` → `metadata.yaml`, `"execution.entry_points"` → `execution.yaml`). For each path: go back to the pass that owns it (Pass 1 for `model.*`, Pass 2 for `execution.*`), re-read the source files, and fill or correct the field in the written file — do not fabricate a value to satisfy the check; if a source truly lacks it, that is a `confidence: none` / `not_determined` value, which still resolves the structural gate. Record every path you touched in `execution.yaml`'s `provenance.validation.flagged_fields`, then re-run the validator. Repeat this fix-and-re-run loop until it exits 0. Never present a `status: "fail"` annotation.
    - **Exit 2:** usage error (missing file or unparseable YAML) — fix the invocation or the YAML and re-run.
 
@@ -180,6 +200,8 @@ For ontology mappings, use `mapping_confidence` separately (see Pass 4).
 ### Missing information
 
 Never silently omit a section. If you found no execution metadata, emit `execution:` with `status: not_determined` and a brief note explaining why (e.g. "single SBML file, no surrounding repo").
+
+For **individual optional fields**: if a key is present in the schema but you found no evidence for it, emit it as `[]` (lists) or `null` (scalars). **Never omit a schema key from the output.** Omitting a key is indistinguishable from forgetting it — emit the key with an empty value so the curator knows the field was considered.
 
 ### Don't fabricate identifiers
 

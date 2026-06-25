@@ -7,29 +7,32 @@
 """
 Annotation Validator
 
-Runs structural, semantic, and registry compatibility checks on the produced
-metadata.yaml, execution.yaml, and full annotation YAML. Writes validation_report.json.
+CLI: structural-only check (Sections A & B required fields) on the written
+annotation package (metadata-package/ dir holding metadata.yaml + execution.yaml).
+Prints a JSON result to stdout; exits 0 pass / 1 fail / 2 usage error.
 
-Bundled skill script — run as the final validation gate in Assembly, on the
-written annotation package (the metadata-package/ dir inside the model repo,
-holding metadata.yaml + execution.yaml):
+Semantic checks (entry-point path verification, ontology coverage, dependency
+consistency) and registry compatibility are available programmatically via
+Validator.validate() but are NOT run by the CLI.
+
+Bundled skill script — run as the final validation gate in Assembly:
 
     uv run scripts/validate.py --package <repo>/metadata-package --input-path <repo>
 
 (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server.
 Fallback if uv is unavailable: `python3 scripts/validate.py ...` with PyYAML present.)
 
-Exit code rules:
-    0 — all required fields present, execution_command verified, registry check passed
-    1 — any required field missing/null, execution_command path not found, or
-        RegisterModelRequest cannot be constructed
+CLI exit code rules (structural check only):
+    0 — all REQUIRED Section A & B fields present and non-empty
+    1 — any REQUIRED field missing or empty (details in stdout JSON)
+    2 — usage error (bad args, missing file, or unparseable YAML)
 
-Warnings (flagged in report but do not change exit code):
+Warnings produced by Validator.validate() (do not change exit code):
     - needs_review count > 5
     - ontology coverage < 40% of eligible fields
     - any leaf field missing a source citation
     - listed dependency not found in setup.py / pyproject.toml
-    - zero IOSlot objects constructable from inputs/outputs
+    - zero IOSlot objects constructable from io.inputs / io.outputs
 """
 
 from __future__ import annotations
@@ -83,11 +86,12 @@ REQUIRED_SECTION_B: list[tuple[str, str]] = [
 _ONTOLOGY_ELIGIBLE_PATHS = [
     "model.model_class",
     "model.formalism",
-    "model.biology.organisms",
+    "model.biology.species",
+    "model.biology.infectious_agent",
+    "model.biology.health_condition",
+    "model.biology.topic_category",
     "model.biology.biological_processes",
     "model.biology.molecular_entities",
-    "model.biology.cell_types",
-    "model.biology.anatomy",
     "execution.language",
 ]
 
@@ -168,7 +172,7 @@ class Validator:
             )
 
         # --- Registry compatibility ---
-        registry = self._check_registry(metadata)
+        registry = self._check_registry(metadata, annotation)
         report["registry_compatibility"] = registry
         if not registry.get("register_model_constructable", False):
             report["exit_code"] = 1
@@ -302,13 +306,10 @@ class Validator:
             "undocumented_dependencies": [],
         }
 
-        # Count needs_review across all extracted files
-        all_text = ""
-        if metadata:
-            all_text += str(metadata)
-        if execution:
-            all_text += str(execution)
-        needs_review_count = all_text.count("needs_review")
+        # Count needs_review across all extracted files using a proper dict walker.
+        # str(dict) produces Python repr (single-quoted keys/values) which is not
+        # equivalent to YAML and causes unreliable substring matching.
+        needs_review_count = _count_needs_review(metadata) + _count_needs_review(execution)
         result["needs_review_count"] = needs_review_count
         result["needs_review_warning"] = needs_review_count > 5
 
@@ -318,21 +319,27 @@ class Validator:
             result["ontology_coverage_pct"] = coverage
             result["ontology_coverage_warning"] = coverage is not None and coverage < 40.0
 
-        # execution_command path check
+        # Entry-point path check: walk entry_points[0].command (schema field).
+        # The legacy top-level execution_command field is not defined in the schema.
         if execution:
-            cmd = execution.get("execution_command")
+            entry_points = execution.get("entry_points") or []
+            cmd = None
+            if isinstance(entry_points, list) and entry_points:
+                first_ep = entry_points[0]
+                if isinstance(first_ep, dict):
+                    cmd = first_ep.get("command")
             if cmd and cmd != "needs_review":
                 verified, path_str = self._verify_execution_command(str(cmd))
                 result["execution_command_verified"] = verified
                 result["execution_command_path"] = path_str
                 if not verified:
                     log.warning(
-                        "execution_command path not found: %s (searched under %s)",
+                        "entry_points[0].command path not found: %s (searched under %s)",
                         path_str,
                         self._input_path,
                     )
             else:
-                # needs_review or missing — not a hard failure at semantic layer
+                # needs_review, missing, or no entry_points — not a hard failure
                 result["execution_command_verified"] = True
 
         # Dependency consistency check
@@ -395,7 +402,11 @@ class Validator:
     # Registry compatibility
     # ------------------------------------------------------------------
 
-    def _check_registry(self, metadata: dict[str, Any] | None) -> dict[str, Any]:
+    def _check_registry(
+        self,
+        metadata: dict[str, Any] | None,
+        annotation: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         result: dict[str, Any] = {
             "register_model_constructable": False,
             "missing_registry_fields": [],
@@ -429,16 +440,26 @@ class Validator:
 
         missing: list[str] = []
 
-        name = _str_val(metadata.get("name"))
-        location_uri = _str_val(metadata.get("source_repository"))
-        exec_type_str = _str_val(metadata.get("execution_type"))
+        # Navigate the schema-conforming nested paths in metadata.yaml:
+        #   model.name.value          → display name
+        #   model.external_identifier.value → canonical URI / URL
+        # execution_type is not a schema field; use a safe fallback so the
+        # registry dry-run can proceed when the two required fields are present.
+        model = (metadata or {}).get("model") or {}
+        name_field = model.get("name")
+        name = _str_val(
+            name_field.get("value") if isinstance(name_field, dict) else name_field
+        )
+        ext_id = model.get("external_identifier") or {}
+        location_uri = _str_val(
+            ext_id.get("value") if isinstance(ext_id, dict) else ext_id
+        )
+        exec_type_str = "python"  # not a schema field; default for registry dry-run
 
         if not name:
-            missing.append("name")
+            missing.append("name (model.name.value)")
         if not location_uri:
-            missing.append("location_uri (source_repository)")
-        if not exec_type_str:
-            missing.append("execution_type")
+            missing.append("location_uri (model.external_identifier.value)")
 
         if missing:
             result["missing_registry_fields"] = missing
@@ -468,7 +489,7 @@ class Validator:
             from mism_registry.types import IOSlot  # type: ignore[import]
 
             slots_ok = 0
-            for slot_data in _iter_io_slots(metadata):
+            for slot_data in _iter_io_slots(annotation or {}):
                 try:
                     IOSlot(
                         name=slot_data.get("name", ""),
@@ -481,7 +502,7 @@ class Validator:
             result["io_slots_constructed"] = slots_ok
             if slots_ok == 0:
                 result["warnings"].append(
-                    "Zero IOSlot objects constructable from inputs/outputs"
+                    "Zero IOSlot objects constructable from io.inputs / io.outputs"
                 )
         except ImportError:
             pass
@@ -540,29 +561,77 @@ def _compute_ontology_coverage(annotation: dict[str, Any]) -> float | None:
 
 
 def _extract_dep_names(execution: dict[str, Any]) -> list[str]:
-    """Extract dependency package names from the execution dict."""
-    deps = execution.get("dependencies") or []
+    """Extract dependency package names from the execution dict.
+
+    Handles the schema-conforming nested structure::
+
+        dependencies:
+          runtime: [{name, version_constraint, source}, ...]
+          optional: [...]
+          system: [...]
+
+    and a legacy flat list::
+
+        dependencies: [{name: ...}, ...]
+    """
+    deps_raw = execution.get("dependencies") or []
+    if isinstance(deps_raw, dict):
+        deps: list[Any] = (
+            list(deps_raw.get("runtime") or [])
+            + list(deps_raw.get("optional") or [])
+            + list(deps_raw.get("system") or [])
+        )
+    else:
+        deps = list(deps_raw)
+
     names = []
-    if isinstance(deps, list):
-        for dep in deps:
-            if isinstance(dep, dict):
-                name = dep.get("name")
-                if name:
-                    names.append(str(name))
-            elif isinstance(dep, str):
-                # "name==version" style
-                names.append(re.split(r'[>=<!]', dep)[0].strip())
+    for dep in deps:
+        if isinstance(dep, dict):
+            name = dep.get("name")
+            if name:
+                names.append(str(name))
+        elif isinstance(dep, str):
+            # "name==version" style
+            names.append(re.split(r'[>=<!]', dep)[0].strip())
     return names
 
 
-def _iter_io_slots(metadata: dict[str, Any]):
-    """Yield slot dicts from metadata inputs and outputs."""
-    for key in ("inputs", "outputs"):
-        slots = metadata.get(key) or []
-        if isinstance(slots, list):
-            for slot in slots:
+def _iter_io_slots(annotation: dict[str, Any]):
+    """Yield slot dicts from io.inputs (all sub-lists) and io.outputs.
+
+    The ``io`` section lives in execution.yaml under the ``io:`` top-level key
+    and is available in the combined annotation dict — not in metadata.yaml.
+    """
+    io = (annotation or {}).get("io") or {}
+    inputs = io.get("inputs") or {}
+    if isinstance(inputs, dict):
+        # Schema format: inputs split into parameters / initial_conditions / data_inputs
+        for sub_key in ("parameters", "initial_conditions", "data_inputs"):
+            for slot in (inputs.get(sub_key) or []):
                 if isinstance(slot, dict):
                     yield slot
+    elif isinstance(inputs, list):
+        for slot in inputs:
+            if isinstance(slot, dict):
+                yield slot
+    for slot in (io.get("outputs") or []):
+        if isinstance(slot, dict):
+            yield slot
+
+
+def _count_needs_review(obj: Any) -> int:
+    """Recursively count leaf string values equal to 'needs_review'.
+
+    Uses a proper dict/list traversal rather than converting to Python repr
+    (str(dict) is unreliable — it quotes strings differently than YAML).
+    """
+    if isinstance(obj, str):
+        return 1 if obj == "needs_review" else 0
+    if isinstance(obj, dict):
+        return sum(_count_needs_review(v) for v in obj.values())
+    if isinstance(obj, list):
+        return sum(_count_needs_review(item) for item in obj)
+    return 0
 
 
 def _str_val(val: Any) -> str:
