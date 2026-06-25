@@ -5,19 +5,17 @@ description: Annotate a biological/biomedical computational model (git repo, fol
 
 # Biological Computational Model Annotator
 
-A first-pass annotation skill: point it at a model (repo, folder, or URL) and it produces a single MIRIAM-aligned YAML metadata file with ontology mappings already attached. The output is meant to be a starting point for a human curator — every field carries a `confidence` and `source` so the reviewer can see what was found verbatim versus inferred.
+A first-pass annotation skill: point it at a model (repo, folder, or URL) and it produces a MIRIAM-aligned **annotation package** (a `metadata-package/` folder of YAML + a README) with ontology mappings already attached. The output is meant to be a starting point for a human curator — every field carries a `confidence` and `source` so the reviewer can see what was found verbatim versus inferred.
 
 ## What the skill produces
 
-One YAML file, `<model-name>.annotation.yaml`, structured in three top-level sections that mirror the three concerns of the annotation task:
+An **annotation package** — a folder named `metadata-package/`, written **inside the model's own directory** (the repo/folder being annotated) — containing three files:
 
-1. **`model`** — identity, biology, authorship, references, licensing.
-2. **`execution`** — how to actually run it (language, dependencies, environment, resources, entry points).
-3. **`io`** — inputs and outputs with units and formats.
+1. **`metadata.yaml`** — `model` (Section A: identity, biology, authorship, references, licensing) plus the identity/ontology half of `provenance` (files inspected, ontology lookups, unmapped fields, deferred scope).
+2. **`execution.yaml`** — `execution` (Section B: language, dependencies, environment, resources, entry points) and `io` (Section C: inputs/outputs with units and formats), plus the `validation` half of `provenance`.
+3. **`README.md`** — a human-readable model-card summary of the package (not validated).
 
-A fourth top-level block, **`provenance`**, records the annotation run itself (date, source path, files inspected).
-
-The full field-by-field schema lives in `references/schema.md`. Read it before writing the final YAML.
+`provenance` is split across the two YAML files; a small run-stamp (date, source path, files inspected) is repeated in both so each file stands alone. The full field-by-field schema and the exact split live in `references/schema.md`. Read it before writing the package.
 
 ## When to use this skill
 
@@ -43,7 +41,9 @@ If the user gives you nothing, ask once for one of these.
 
 ## Workflow
 
-The workflow is four passes plus assembly. **Do not start writing the YAML until you finish all four passes** — earlier passes inform later ones (e.g. knowing the model is a stochastic ABM changes how you describe inputs).
+The workflow is four passes plus assembly. **Do not start writing the package until you finish all four passes** — earlier passes inform later ones (e.g. knowing the model is a stochastic ABM changes how you describe inputs).
+
+**Extraction discipline (Passes 0–3).** These passes are extraction tasks, not creative generation. Copy values verbatim from source files wherever possible — do not paraphrase or rephrase. Prefer `confidence: high` over `confidence: inferred` whenever the source text is explicit. Only use `confidence: inferred` when you are reading between the lines of the source.
 
 ### Pass 0 — Inventory
 
@@ -60,11 +60,29 @@ Write a brief inventory note to yourself (mental or scratch). You'll cite specif
 Read the README first; it's where authors put the high-level pitch. Then skim the top of the main module / entry script. You're looking for:
 
 - **Name**, **short description**, **long description**.
-- **Model class(es)**: pick from agent-based / ODE / PDE / stochastic (Gillespie, tau-leaping) / constraint-based (FBA) / boolean / rule-based / Markov chain. Map to MAMO later. The field is a **list** — if the model genuinely combines paradigms (e.g. agent-based agents whose internal state evolves under ODEs), record both. The label "hybrid" by itself is not a class; emit the component classes and let the multi-element list speak for itself.
-- **Formalism(s)**: the mathematical machinery the model uses (ODE, SDE, PDE, difference equation, discrete-event, Markov chain). Also a list. Distinct from model_class — `model_class` is the modeling *approach* (agent-based, constraint-based); `formalism` is the *math* (an agent-based model may still use ODEs internally). For pure-paradigm models the list will have one element.
+- **Model class(es)**: the modeling *approach* — use only values from the `model_class[]` closed vocabulary below. The field is a **list** — if the model genuinely combines paradigms (e.g. agent-based agents whose internal state evolves under ODEs), record both. The label "hybrid" by itself is not a class; emit the component classes and let the multi-element list speak for itself. Map to MAMO in Pass 4.
+- **Formalism(s)**: the *mathematical machinery* the model uses — distinct from model_class (`model_class` is the approach; `formalism` is the math). Also a list; use only values from the `formalism[]` closed vocabulary below. For pure-paradigm models the list will have one element.
 - **Biological scope**: organism(s), cell type(s), tissue/anatomy, biological process(es), molecules involved. Map to NCBITaxon, CL, UBERON, GO, ChEBI.
-- **Spatial/temporal characteristics**: deterministic vs stochastic, continuous vs discrete time, dimensionality, spatial scale.
-- **Authorship and contacts (two separate fields).** `authors` records who *created* the model (intellectual contribution): name, affiliation, ORCID, role. `contacts` records who to *reach* about the model now: corresponding author, current maintainer, support address. The two lists can overlap or not — don't conflate them. Put email addresses only in `contacts`, not `authors`. Sources to check, in order: `CITATION.cff` (has both fields explicitly), `pyproject.toml` / `setup.py` (authors and maintainers separately), README author/contact blocks, git log (last-resort fallback for maintainer only).
+- **Spatial/temporal characteristics**: deterministic vs stochastic, continuous vs discrete time, dimensionality, spatial scale. Use only the values from the closed vocabularies below — do not invent synonyms or variant spellings.
+
+  | Field | Allowed values |
+  |---|---|
+  | `model_class[]` | `agent-based model` \| `ordinary differential equation model` \| `partial differential equation model` \| `stochastic model` \| `constraint-based model` \| `Boolean network model` \| `rule-based model` \| `Markov chain model` \| `multi-scale model` |
+  | `formalism[]` | `ODE` \| `SDE` \| `PDE` \| `Boolean` \| `Markov chain` \| `rule-based` \| `discrete-event` \| `stochastic` \| `agent-based` |
+  | `determinism` | `deterministic` \| `stochastic` \| `hybrid` \| `unknown` |
+  | `time_dynamics` | `continuous` \| `discrete` \| `event-driven` \| `static` \| `unknown` |
+  | `spatial` | `non-spatial` \| `well-mixed` \| `compartmental` \| `1D` \| `2D` \| `3D` \| `lattice` \| `off-lattice` \| `unknown` |
+  | `model_scales[]` | `molecular` \| `cellular` \| `tissue` \| `individual` \| `population` |
+
+  **`time_dynamics` tiebreaker — `discrete` vs `event-driven`:** Use `discrete` when the framework advances by a fixed timestep (e.g. Vivarium, NetLogo, Mesa). Use `event-driven` only for true event-queue simulators that advance time to the next scheduled event (e.g. NEURON, SimPy, NEST). When in doubt for fixed-timestep frameworks, prefer `discrete`.
+
+  **Fields that must always be emitted** — even when no evidence exists, use `null` for scalars and `[]` for lists: `model_class`, `formalism`, `determinism`, `time_dynamics`, `spatial`, `biology`. Do not omit these keys. A missing key is indistinguishable from a forgotten one.
+
+  **Note on `multiscale`:** this is a bare `true`/`false`/`unknown` scalar — it does **not** use a `{value, source, confidence}` envelope. It is the only field in Section A that works this way.
+
+  **Note on `model_scales` items:** even though the allowed values are a closed vocabulary (see table above), each list entry still uses the standard `{value, source, confidence}` envelope — not a bare string.
+
+- **Authorship and contacts (two separate fields).** `authors` records who *created* the model (intellectual contribution): name, affiliation, ORCID, role. `contacts` records who to *reach* about the model now: corresponding author, current maintainer, support address. The two lists can overlap or not — don't conflate them. Put email addresses only in `contacts`, not `authors`. Sources to check, in order: `CITATION.cff` (has both fields explicitly), `pyproject.toml` / `setup.py` (authors and maintainers separately), README author/contact blocks, git log (last-resort fallback for maintainer only). **Only add an entry to `contacts` when you found the person's email address verbatim in a source file — do not construct or infer email addresses.**
 - **License**: from `LICENSE` file or metadata config. Use SPDX identifiers.
 - **Publications / references**: DOIs in README or `CITATION.cff`. Capture as PubMed/DOI identifiers.
 - **Version**: from `__version__`, `pyproject.toml`, `package.json`, or git tags.
@@ -84,6 +102,8 @@ You want a reviewer to be able to run this model after reading the YAML. Pull ou
 - **Tests**: presence and how to invoke them.
 
 If the model is just a single file (e.g. an SBML file), execution metadata is mostly about the simulator it targets — capture that instead.
+
+Sections A and B are validated against `references/schema.md` at the end, in Assembly — there is no mid-workflow checkpoint. Fill `model:` and `execution:` as completely as the sources allow now; you will run the structural gate once, on the finished file, before presenting it.
 
 ### Pass 3 — Inputs and outputs (Section C)
 
@@ -129,10 +149,30 @@ Batch tip: group queries by ontology so you reuse the same `ontologyId` repeated
 
 Once all four passes are done:
 
-1. Render the YAML following `references/schema.md`. Use the BioModels/MIRIAM qualifier vocabulary where it applies (e.g. `bqbiol:is`, `bqbiol:hasTaxon`, `bqmodel:isDerivedFrom`).
-2. Add a `provenance` block: timestamp, the path you annotated, the list of source files you actually read, the OLS API version if available, and a `human_review_required: true` flag.
-3. Write the file to the working directory as `<model-name>.annotation.yaml`. Use a slug of the model name (lowercase, hyphens) for the filename.
-4. Briefly summarize for the user: what type of model it is, the most notable fields you filled, anything where confidence was low, and which sections need human review most. Then present the file.
+1. Render the content following `references/schema.md`. Use the BioModels/MIRIAM qualifier vocabulary where it applies (e.g. `bqbiol:is`, `bqbiol:hasTaxon`, `bqmodel:isDerivedFrom`).
+2. Build the `provenance` content: timestamp, the path you annotated, the list of source files you actually read, the OLS lookups, `unmapped_fields`, `partial_annotation_scope`, a `validation` sub-block (see `references/schema.md`), and a `human_review_required: true` flag.
+3. Write the **annotation package** as a folder `metadata-package/` **inside the model's own directory** (the repo/folder you annotated — not your cwd), with two YAML files:
+   - `metadata-package/metadata.yaml` — `schema_version`, `model:`, and the identity/ontology half of `provenance:` (`files_inspected`, `ontology_lookups`, `unmapped_fields`, `partial_annotation_scope`).
+   - `metadata-package/execution.yaml` — `schema_version`, `execution:`, `io:`, and the `validation` half of `provenance:`.
+   - Repeat the run-stamp (`annotated_at`, `annotated_by`, `source_root`, `human_review_required`) in both files so each stands alone.
+4. **Validation gate — mandatory, run on the package you just wrote. Do not present the annotation until this exits 0.** Run the bundled validator against the real package (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server).
+
+   **Locating the script.** `scripts/validate.py` ships *inside this skill's directory*, which is **not** your current working directory (your cwd is the model repo you are annotating). Resolve the path against the skill directory — the directory holding this `SKILL.md`. Your harness tells you where that is: it loads the skill with a `location=<.../SKILL.md>` attribute / a "References are relative to `<dir>`" line. Take that `<dir>` and run `<dir>/scripts/validate.py`. Do **not** run a bare `scripts/validate.py` (resolves against cwd and fails) and do **not** `find`/`rg` the filesystem for it — the path is already known from the skill location.
+
+   ```bash
+   # SKILL_DIR = the directory containing this SKILL.md (from the skill's location attribute)
+   uv run "$SKILL_DIR/scripts/validate.py" --package <model-repo-root>/metadata-package --input-path <model-repo-root>
+   ```
+
+   (Important: Try `uv` first, if `uv` is unavailable, fall back to `python3 "$SKILL_DIR/scripts/validate.py" --package <model-repo-root>/metadata-package` with PyYAML installed.) It reconstructs the `model:` and `execution:` sections from the two files, checks them against the REQUIRED fields in `references/schema.md`, prints a JSON result to stdout, and sets its exit code:
+
+   - **Exit 0 (`status: "pass"`):** overwrite `provenance.validation` **in `execution.yaml`** with `{method: "cli", status: "pass", flagged_fields: []}` — this must be a populated mapping, not an empty `{}`. Then proceed to step 5.
+   - **Exit 1 (`status: "fail"`):** this is an instruction to go back and fix, not a reason to stop. The `missing_required_fields` and `empty_required_fields` lists name every field needing attention by path (e.g. `"model.name"` → `metadata.yaml`, `"execution.entry_points"` → `execution.yaml`). For each path: go back to the pass that owns it (Pass 1 for `model.*`, Pass 2 for `execution.*`), re-read the source files, and fill or correct the field in the written file — do not fabricate a value to satisfy the check; if a source truly lacks it, that is a `confidence: none` / `not_determined` value, which still resolves the structural gate. Record every path you touched in `execution.yaml`'s `provenance.validation.flagged_fields`, then re-run the validator. Repeat this fix-and-re-run loop until it exits 0. Never present a `status: "fail"` annotation.
+   - **Exit 2:** usage error (missing file or unparseable YAML) — fix the invocation or the YAML and re-run.
+
+   This is the only structural gate and it is not optional. Running it is the definition of "done" — an annotation that has not exited 0 is not finished, regardless of how complete it looks.
+5. Write `metadata-package/README.md` — a model-card summary the curator reads first: model name + one-line type (`model_class` / `formalism`), organism/biology, a "Package contents" file list, what the annotation covers, what was deferred (passes/sections skipped, count of `mapping_confidence: none`), and the fields most needing human review (low/`none` confidence). Keep it skimmable — it mirrors the YAML, it doesn't replace it.
+6. Briefly summarize for the user: what type of model it is, the most notable fields you filled, anything where confidence was low, and which sections need human review most. Then present the package.
 
 ---
 
@@ -160,6 +200,8 @@ For ontology mappings, use `mapping_confidence` separately (see Pass 4).
 ### Missing information
 
 Never silently omit a section. If you found no execution metadata, emit `execution:` with `status: not_determined` and a brief note explaining why (e.g. "single SBML file, no surrounding repo").
+
+For **individual optional fields**: if a key is present in the schema but you found no evidence for it, emit it as `[]` (lists) or `null` (scalars). **Never omit a schema key from the output.** Omitting a key is indistinguishable from forgetting it — emit the key with an empty value so the curator knows the field was considered.
 
 ### Don't fabricate identifiers
 
@@ -190,3 +232,7 @@ Pointers and per-field ontology choices are in `references/ontologies.md`.
 - `references/ontologies.md` — which ontology to consult for which field, with OLS query tips.
 
 Read both before writing your final output.
+
+## Available scripts
+
+- **`scripts/validate.py`** — Sections A & B structural check against `references/schema.md`. Run as the final validation gate in Assembly, on the written package. The script lives in this skill's directory, not your cwd — invoke it as `<skill-dir>/scripts/validate.py` (see the Assembly "Locating the script" note): `uv run "$SKILL_DIR/scripts/validate.py" --package <repo>/metadata-package --input-path <repo>`. Exits 0 pass / 1 fail / 2 usage error; prints a JSON result to stdout. See `--help` for details.

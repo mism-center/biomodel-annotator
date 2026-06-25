@@ -1,105 +1,148 @@
-# Annotation YAML Schema
+# Annotation Package Schema
 
-The output of the `biomodel-annotator` skill. Every leaf value field carries `value`, `source`, and `confidence` siblings unless noted. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, and `mapping_confidence`.
+The output of the `biomodel-annotator` skill is an **annotation package**: a directory named `metadata-package/`, written **inside the model's own directory** (the repo/folder being annotated), holding three files. Every leaf value field carries `value`, `source`, and `confidence` siblings unless noted. Ontology-mapped fields additionally carry `iri`, `ontology_label`, `ontology`, and `mapping_confidence`.
 
-## Top-level structure
+## Package layout
+
+```
+<model-dir>/
+  metadata-package/
+    metadata.yaml    # schema_version + model (Section A) + provenance (identity/ontology bits)
+    execution.yaml   # schema_version + execution (Section B) + io (Section C) + provenance (validation bits)
+    README.md        # human-readable model-card summary; not validated
+```
+
+The four logical sections below (`model`, `execution`, `io`, `provenance`) are the field definitions; they are **distributed across the two YAML files** as shown. `provenance` is split: the identity/ontology sub-blocks live in `metadata.yaml`, the `validation` result lives in `execution.yaml`, and a small run-stamp (`annotated_at`, `annotated_by`, `source_root`, `human_review_required`) is repeated in both so each file stands alone.
+
+### metadata.yaml
 
 ```yaml
 schema_version: "0.1"
-model: { ... }       # Section A
-execution: { ... }   # Section B
-io: { ... }          # Section C
-provenance: { ... }  # Run metadata
+model: { ... }        # Section A — see below
+provenance:           # identity/ontology subset (see provenance below)
+  annotated_at: ...
+  annotated_by: ...
+  source_root: ...
+  files_inspected: [ ... ]
+  ontology_lookups: { ... }
+  unmapped_fields: [ ... ]
+  partial_annotation_scope: { ... }
+  human_review_required: true
+```
+
+### execution.yaml
+
+```yaml
+schema_version: "0.1"
+execution: { ... }    # Section B — see below
+io: { ... }           # Section C — see below
+provenance:           # validation subset (see provenance below)
+  annotated_at: ...
+  annotated_by: ...
+  source_root: ...
+  validation: { ... }
+  human_review_required: true
 ```
 
 ## Section A — `model`
 
 ```yaml
 model:
-  name: { value, source, confidence }
-  short_description: { value, source, confidence }
-  long_description: { value, source, confidence }
-  version: { value, source, confidence }
-  identifier:                          # If model has a registered ID (e.g. BIOMD0000000012)
-    scheme: "biomodels" | "doi" | "url" | "other"
-    value: ...
-    source: ...
-  model_class:                         # list, ontology-mapped to MAMO. Length 1 for pure-paradigm models, ≥2 for hybrids (e.g. agent-based + ODE).
-    - value: "agent-based model"
-      iri: "http://identifiers.org/mamo/MAMO_0000028"
-      ontology_label: "agent-based model"
-      ontology: "mamo"
-      mapping_confidence: high
-      source: ...
-      confidence: ...
-  formalism:                           # list, ontology-mapped to MAMO/KISAO. Each formalism the model uses (ODE, SDE, Boolean, Markov chain, ...). Length 1 for single-paradigm models, ≥2 for hybrids. Paired conceptually with model_class but kept separate because model_class is the modeling *approach* (agent-based, constraint-based) while formalism is the *mathematical machinery* (ODE, SDE).
-    - value: ...
-      iri: ...
-      ontology_label: ...
-      ontology: "mamo" | "kisao"
-      mapping_confidence: ...
-      source: ...
-      confidence: ...
-  determinism: "deterministic" | "stochastic" | "hybrid" | "unknown"
-  time_dynamics: "continuous" | "discrete" | "event-driven" | "static" | "unknown"
-  spatial: "non-spatial" | "well-mixed" | "compartmental" | "1D" | "2D" | "3D" | "lattice" | "off-lattice" | "unknown"
-  multi_scale: true | false | unknown
+  name: { value, source, confidence } # REQUIRED
+  short_description: { value, source, confidence } # REQUIRED
+  long_description: { value, source, confidence } # REQUIRED
+  version: { value, source, confidence } # REQUIRED
+  external_identifier:                          # REQUIRED
+    scheme: "biomodels", "doi", "url", "other", null  # REQUIRED
+    value: ... # REQUIRED
+    source: ... # REQUIRED
+  model_class:                         # OPTIONAL. list, ontology-mapped to MAMO. Length 1 for pure-paradigm models, ≥2 for hybrids (e.g. agent-based + ODE).
+    - value: "agent-based model" # REQUIRED
+      iri: "http://identifiers.org/mamo/MAMO_0000028" # OPTIONAL
+      ontology_label: "agent-based model" # OPTIONAL
+      ontology: "mamo" # OPTIONAL 
+      mapping_confidence: high # OPTIONAL
+      source: ... # REQUIRED
+      confidence: ... # REQUIRED
+  formalism:                           # OPTIONAL. list, ontology-mapped to MAMO/KISAO. Each formalism the model uses (ODE, SDE, Boolean, Markov chain, ...). Length 1 for single-paradigm models, ≥2 for hybrids. Paired conceptually with model_class but kept separate because model_class is the modeling *approach* (agent-based, constraint-based) while formalism is the *mathematical machinery* (ODE, SDE). 
+    - value: ... # REQUIRED
+      iri: ... # OPTIONAL
+      ontology_label: ... # OPTIONAL
+      ontology: "mamo", "kisao" # OPTIONAL
+      mapping_confidence: ... # OPTIONAL
+      source: ... # REQUIRED
+      confidence: ... # REQUIRED 
+  determinism: "deterministic", "stochastic", "hybrid", "unknown" # OPTIONAL
+  time_dynamics: "continuous", "discrete", "event-driven", "static", "unknown" # OPTIONAL
+  spatial: "non-spatial", "well-mixed", "compartmental", "1D", "2D", "3D", "lattice", "off-lattice", "unknown" # OPTIONAL
+  multiscale: true | false | unknown # REQUIRED
+  model_scales:                      # REQUIRED. the scale(s) of the model (e.g., "molecular", "cellular", "tissue", "individual", "population"). list
+    - { ... } # REQUIRED
   biology:
-    organisms:                         # list, ontology-mapped to NCBITaxon
-      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence }
-    cell_types:                        # list, ontology-mapped to CL
-      - { ... }
-    anatomy:                           # list, ontology-mapped to UBERON
-      - { ... }
-    biological_processes:              # list, ontology-mapped to GO
-      - { ... }
-    molecular_entities:                # list, ontology-mapped to ChEBI; small molecules, ions, drugs
-      - { ... }
-    proteins_genes:                    # list, free-text + UniProt / Ensembl identifiers when available
-      - { value, identifier: { scheme, value }, source, confidence }
-  authors:                              # who created the model (intellectual authorship). Author identity is separate from how to reach a current maintainer; do not put email here unless the user has no separate contacts block.
-    - name: ...
-      affiliation: ...
-      orcid: ...                       # full ORCID URL
-      role: "author" | "co-author" | "principal investigator" | "developer" | null
-      source: ...
-  contacts:                             # how to reach someone about the model now — may overlap with authors, may not. Keeps "who wrote it" separate from "who to email about it".
-    - name: ...
-      role: "corresponding author" | "maintainer" | "support" | "submitter" | null
-      email: ...
-      affiliation: ...
-      source: ...
-  license:
-    spdx_id: "MIT" | "Apache-2.0" | "GPL-3.0-or-later" | ...
-    source: ...
-    confidence: ...
-  references:                          # papers, preprints
-    - title: ...
-      doi: ...
-      pmid: ...
-      url: ...
-      source: ...
-  related_resources:                   # data, prior models the curators want linked
-    - qualifier: "bqmodel:isDerivedFrom" | "bqbiol:isVersionOf" | ...
-      identifier: { scheme, value }
-      source: ...
+    species:                         # OPTIONAL. Host or model organism (e.g., "SARS-CoV-2", "HIV-1", "Homo sapiens"). list, ontology-mapped to NCBITaxon
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } #  REQUIRED.
+    infectious_agent:                # OPTIONAL. pathogen or organism of study. list, ontology-mapped to NCBI Taxonomy IDs
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED.
+    health_condition:                 # OPTIONAL. mapped to disease or clinical indication. list, ontology mapped to Mondo Disease Ontology (MONDO), Human Phenotype Ontology (HPO), or and Disease Ontology (DOID)
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED
+    topic_category:                    #OPTIONAL . domain-level filtering and support topic-based navigation. list, mapped to EDAM Ontology
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED
+    biological_processes:              # OPTIONAL. list, ontology-mapped to GO
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED.
+    molecular_entities:                # OPTIONAL. list, ontology-mapped to ChEBI; small molecules, ions, drugs
+      - { value, iri, ontology_label, ontology, mapping_confidence, source, confidence } # REQUIRED.
+    proteins_genes:                    # OPTIONAL. list, free-text + UniProt / Ensembl identifiers when available
+      - { value, identifier: { scheme, value }, source, confidence } # REQUIRED.
+  authors:                              # REQUIRED. who created the model (intellectual authorship). Author identity is separate from how to reach a current maintainer; do not put email here unless the user has no separate contacts block.
+    - name: ... # REQUIRED
+      affiliation: ... # REQUIRED
+      orcid: ...                     # OPTIONAL.  # full ORCID URL
+      role: "author", "co-author", "principal investigator", "developer", null # OPTIONAL.
+      source: ... # REQUIRED        
+  contacts:                             # REQUIRED. how to reach someone about the model now — may overlap with authors, may not. Keeps "who wrote it" separate from "who to email about it".
+    - name: ... # REQUIRED
+      role: "corresponding author", "maintainer", "support", "submitter", null # REQUIRED
+      email: ... # REQUIRED
+      affiliation: ... # REQUIRED
+      source: ... # REQUIRED
+  license: # REQUIRED
+    spdx_id: "MIT", "Apache-2.0", "GPL-3.0-or-later" , ... #REQUIRED
+    source: ... # REQUIRED 
+    confidence: ... # REQUIRED 
+  publications:                          # REQUIRED. papers, preprints
+    - title: ...  # REQUIRED
+      doi: ...  # OPTIONAL 
+      pmid: ... # OPTIONAL 
+      url: ...  # REQUIRED
+      source: ... # REQUIRED
+  related_resources:                   # OPTIONAL. data, prior models the curators want linked
+    - qualifier: "bqmodel:isDerivedFrom", "bqbiol:isVersionOf", ... # REQUIRED 
+      identifier: { scheme, value } # REQUIRED 
+      source: ... # REQUIRED
+  funding:                             # OPTIONAL. Grant numbers or funding acknowledgments (e.g., "NIAID U19 AI123456").
+    - funding_organization:  ...   # REQUIRED 
+      grant_number: ... # REQUIRED 
+      acknowledgment: .... # REQUIRED
+
+  
+  
 ```
 
 ## Section B — `execution`
 
 ```yaml
 execution:
-  status: "characterized" | "partially_characterized" | "not_determined"
-  language:                            # ontology-mapped to SWO if possible
-    name: "Python" | "Julia" | "R" | "MATLAB" | "C++" | ...
+  status: "characterized" | "partially_characterized" | "not_determined"  # REQUIRED
+  language:                            # REQUIRED (sub-field `name` required). ontology-mapped to SWO if possible
+    name: "Python" | "Julia" | "R" | "MATLAB" | "C++" | ...  # REQUIRED
     version_constraint: ">=3.10,<3.13"
     iri: ...
     ontology: "swo"
     source: ...
-  environment_kind:                    # ontology-mapped to EDAM operation/format where it fits, else free
+  environment_kind:                    # REQUIRED. ontology-mapped to EDAM operation/format where it fits, else free
     value: "conda" | "pip" | "docker" | "singularity" | "nextflow" | "snakemake" | "jupyter" | "native"
     source: ...
-  dependencies:
+  dependencies:                        # OPTIONAL
     runtime:                           # Python pip / Julia / R / etc.
       - name: "numpy"
         version_constraint: ">=1.24"
@@ -108,18 +151,18 @@ execution:
       - { name, version_constraint, group, source }
     system:                            # apt-get, brew, OS-level libs (BLAS, MPI, CUDA toolkit)
       - { name, version_constraint, source }
-  containers:
+  containers:                          # OPTIONAL
     - kind: "docker" | "singularity"
       file: "Dockerfile" | "container.def"
       image_name: ...
       source: ...
-  compute:
+  compute:                             # OPTIONAL
     cpu_cores: { value, source, confidence }      # use null if not stated
     memory_gb: { value, source, confidence }
     gpu_required: { value, source, confidence }   # boolean
     parallelism: "single" | "multi-thread" | "multi-process" | "MPI" | "GPU" | "distributed"
     typical_runtime: { value, unit, source, confidence }  # e.g. "minutes", "hours"
-  entry_points:                        # one entry per command the user might invoke
+  entry_points:                        # REQUIRED (non-empty list). one entry per command the user might invoke
     - command: "python -m vivarium_chemotaxis.experiments.run_chemotaxis"
       purpose: "Run the main chemotaxis experiment"
       arguments:                       # capture if README documents them
@@ -127,11 +170,11 @@ execution:
           description: "Simulation duration in seconds"
           default: 10.0
       source: "README.md:120"
-  tests:
+  tests:                               # OPTIONAL
     framework: "pytest" | "unittest" | "Test.jl" | ...
     invocation: "pytest tests/"
     source: ...
-  notes: ...                           # free text for anything that doesn't fit
+  notes: ...                           # OPTIONAL. free text for anything that doesn't fit
 ```
 
 ## Section C — `io`
@@ -198,6 +241,10 @@ provenance:
     - "README.md"
     - "pyproject.toml"
     - "vivarium_chemotaxis/experiments/run_chemotaxis.py"
+  validation:                            # REQUIRED. result of the final Sections A & B validation gate (scripts/validate.py)
+    method: "cli" | "manual"             # "cli" = ran scripts/validate.py; "manual" = checked by hand against schema.md REQUIRED list
+    status: "pass" | "fail"              # final status when the annotation was written (should be "pass")
+    flagged_fields: []                   # field paths the gate reported missing/empty and you then fixed; empty list if clean first pass
   ontology_lookups:
     service: "EBI OLS via ols-ontology MCP"
     embedding_models_available: ["llama-embed-nemotron-8b_pca512", "..."]  # what listEmbeddingModels returned this run

@@ -53,6 +53,22 @@ jobs:
           echo "version_bare=${new#v}" >> "$GITHUB_OUTPUT"
           echo "bump=$bump" >> "$GITHUB_OUTPUT"
 
+      - name: Lint schema/ontologies field-name consistency
+        run: |
+          set -euo pipefail
+          # Ensure the biology field name used in schema.md ('biology.species') matches
+          # what ontologies.md references.  This catches renames that break the agent's
+          # output consistency (the species/organisms drift seen in metadata-package-3).
+          if grep -qE 'biology\.organisms' references/ontologies.md; then
+            echo "ERROR: references/ontologies.md uses 'biology.organisms' but schema.md uses 'biology.species'. Update ontologies.md."
+            exit 1
+          fi
+          if ! grep -qE 'biology\.species' references/ontologies.md; then
+            echo "ERROR: references/ontologies.md does not reference 'biology.species'. Add it to the routing table."
+            exit 1
+          fi
+          echo "Schema/ontologies consistency check passed."
+
       - name: Build skill zip (strict allowlist)
         id: pack
         run: |
@@ -62,11 +78,12 @@ jobs:
           staging="$(mktemp -d)/$name"
           mkdir -p "$staging"
 
-          # Allowlist: SKILL.md + every file under references/.
+          # Allowlist: SKILL.md + every file under references/ + scripts/validate.py.
           # Nothing else ships. No LICENSE, no CLAUDE.md, no .github, no .git,
           # no editor cruft, no future top-level files unless explicitly added here.
-          test -f SKILL.md || { echo "SKILL.md missing"; exit 1; }
-          test -d references || { echo "references/ missing"; exit 1; }
+          test -f SKILL.md              || { echo "SKILL.md missing";              exit 1; }
+          test -d references            || { echo "references/ missing";            exit 1; }
+          test -f scripts/validate.py   || { echo "scripts/validate.py missing";    exit 1; }
           cp SKILL.md "$staging/SKILL.md"
           mkdir -p "$staging/references"
           # Only .md files in references/ (the two reference docs SKILL.md cites).
@@ -74,12 +91,17 @@ jobs:
           ref_files=(references/*.md)
           [ ${#ref_files[@]} -gt 0 ] || { echo "no reference .md files"; exit 1; }
           cp "${ref_files[@]}" "$staging/references/"
+          # Bundled validator script (PEP 723 inline deps; run with uv).
+          mkdir -p "$staging/scripts"
+          cp scripts/validate.py "$staging/scripts/"
 
           # Verify staging contains ONLY allowlisted paths.
           unexpected="$(cd "$staging" && find . -mindepth 1 \
             ! -path './SKILL.md' \
             ! -path './references' \
             ! -path './references/*.md' \
+            ! -path './scripts' \
+            ! -path './scripts/validate.py' \
             -print)"
           if [ -n "$unexpected" ]; then
             echo "ERROR: unexpected files in staging:"
@@ -93,8 +115,8 @@ jobs:
           echo "Packaged contents:"
           unzip -l "$zip_path"
 
-          # Final guard: anything but SKILL.md or references/*.md inside zip fails the build.
-          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(|SKILL\.md|references/(|[^/]+\.md))$' || true)"
+          # Final guard: anything outside the allowlist inside zip fails the build.
+          bad="$(unzip -Z1 "$zip_path" | grep -Ev '^biomodel-annotator/(|SKILL\.md|references/(|[^/]+\.md)|scripts/(|validate\.py))$' || true)"
           if [ -n "$bad" ]; then
             echo "ERROR: zip contains non-skill entries:"
             echo "$bad"
