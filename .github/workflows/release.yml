@@ -150,3 +150,28 @@ jobs:
           Bump type: ${{ steps.bump.outputs.bump }}
           Commit: ${{ github.sha }}" \
             "${{ steps.pack.outputs.zip_path }}"
+
+      # Docker CD: build the Pi harness image (skill + extensions baked in) and
+      # push it to Docker Hub tagged with the same semver as the release + latest.
+      # Lives in this job (not a downstream workflow) because tags/releases pushed
+      # by GITHUB_TOKEN do not trigger other workflows.
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: mismplatform
+          password: ${{ secrets.MISM_DOCKER_PUSH_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push release image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: harness/Dockerfile
+          push: true
+          tags: |
+            mismplatform/pi-agent:${{ steps.bump.outputs.version_bare }}
+            mismplatform/pi-agent:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

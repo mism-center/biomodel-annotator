@@ -1,0 +1,8 @@
+{
+  "skills": ["/opt/skills/biomodel-annotator"],
+  "extensions": [
+    "/opt/pi/extensions/event-log",
+    "/opt/pi/extensions/ols-ontology",
+    "/opt/pi/extensions/stream-output"
+  ]
+}
