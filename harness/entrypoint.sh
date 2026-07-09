@@ -7,6 +7,6 @@ set -euo pipefail
 
 TARGET="${MODEL_INPUT:-/workspace}"
 
-exec pi --mode json --approve \
+exec pi --mode json --approve --model ${AI_MODEL} --stream=all \
   --append-system-prompt "$(cat /opt/pi/APPEND_SYSTEM.md)" \
-  -p "/skill:biomodel-annotator annotate ${TARGET}"
+  -p "/skill:biomodel-annotator annotate ${TARGET}, ${PROMPT}"
