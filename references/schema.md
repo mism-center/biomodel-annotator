@@ -132,49 +132,49 @@ model:
 
 ```yaml
 execution:
-  status: "characterized" | "partially_characterized" | "not_determined"  # REQUIRED
-  language:                            # REQUIRED (sub-field `name` required). ontology-mapped to SWO if possible
-    name: "Python" | "Julia" | "R" | "MATLAB" | "C++" | ...  # REQUIRED
-    version_constraint: ">=3.10,<3.13"
-    iri: ...
-    ontology: "swo"
-    source: ...
-  environment_kind:                    # REQUIRED. ontology-mapped to EDAM operation/format where it fits, else free
-    value: "conda" | "pip" | "docker" | "singularity" | "nextflow" | "snakemake" | "jupyter" | "native"
-    source: ...
-  dependencies:                        # OPTIONAL
-    runtime:                           # Python pip / Julia / R / etc.
-      - name: "numpy"
-        version_constraint: ">=1.24"
-        source: "pyproject.toml:42"
-    optional:
-      - { name, version_constraint, group, source }
-    system:                            # apt-get, brew, OS-level libs (BLAS, MPI, CUDA toolkit)
-      - { name, version_constraint, source }
-  containers:                          # OPTIONAL
-    - kind: "docker" | "singularity"
-      file: "Dockerfile" | "container.def"
-      image_name: ...
-      source: ...
-  compute:                             # OPTIONAL
-    cpu_cores: { value, source, confidence }      # use null if not stated
-    memory_gb: { value, source, confidence }
-    gpu_required: { value, source, confidence }   # boolean
-    parallelism: "single" | "multi-thread" | "multi-process" | "MPI" | "GPU" | "distributed"
-    typical_runtime: { value, unit, source, confidence }  # e.g. "minutes", "hours"
-  entry_points:                        # REQUIRED (non-empty list). one entry per command the user might invoke
-    - command: "python -m vivarium_chemotaxis.experiments.run_chemotaxis"
-      purpose: "Run the main chemotaxis experiment"
-      arguments:                       # capture if README documents them
-        - name: "--duration"
-          description: "Simulation duration in seconds"
-          default: 10.0
-      source: "README.md:120"
-  tests:                               # OPTIONAL
-    framework: "pytest" | "unittest" | "Test.jl" | ...
-    invocation: "pytest tests/"
-    source: ...
-  notes: ...                           # OPTIONAL. free text for anything that doesn't fit
+  status: "characterized" | "partially_characterized" | "not_determined"  # REQUIRED  # exec: optional
+  language:                            # REQUIRED (sub-field `name` required). ontology-mapped to SWO if possible  # exec: optional
+    name: "Python" | "Julia" | "R" | "MATLAB" | "C++" | ...  # REQUIRED  # exec: optional
+    version_constraint: ">=3.10,<3.13"  # exec: optional
+    iri: ...  # exec: optional
+    ontology: "swo"  # exec: optional
+    source: ...  # exec: optional
+  environment_kind:                    # REQUIRED. ontology-mapped to EDAM operation/format where it fits, else free  # exec: required
+    value: "conda" | "pip" | "docker" | "singularity" | "nextflow" | "snakemake" | "jupyter" | "native"  # exec: required
+    source: ...  # exec: optional
+  dependencies:                        # OPTIONAL  # exec: optional
+    runtime:                           # Python pip / Julia / R / etc.  # exec: optional
+      - name: "numpy"  # exec: optional
+        version_constraint: ">=1.24"  # exec: optional
+        source: "pyproject.toml:42"  # exec: optional
+    optional:  # exec: optional
+      - { name, version_constraint, group, source }  # exec: optional
+    system:                            # apt-get, brew, OS-level libs (BLAS, MPI, CUDA toolkit)  # exec: optional
+      - { name, version_constraint, source }  # exec: optional
+  containers:                          # OPTIONAL  # exec: required
+    - kind: "docker" | "singularity"  # exec: required
+      file: "Dockerfile" | "container.def"  # exec: optional
+      image_name: ...  # exec: required
+      source: ...  # exec: optional
+  compute:                             # OPTIONAL  # exec: important
+    cpu_cores: { value, source, confidence }      # use null if not stated  # exec: important
+    memory_gb: { value, source, confidence }  # exec: important
+    gpu_required: { value, source, confidence }   # boolean  # exec: important
+    parallelism: "single" | "multi-thread" | "multi-process" | "MPI" | "GPU" | "distributed"  # exec: optional
+    typical_runtime: { value, unit, source, confidence }  # e.g. "minutes", "hours"  # exec: optional
+  entry_points:                        # REQUIRED (non-empty list). one entry per command the user might invoke  # exec: required
+    - command: "python -m vivarium_chemotaxis.experiments.run_chemotaxis"  # exec: required
+      purpose: "Run the main chemotaxis experiment"  # exec: optional
+      arguments:                       # capture if README documents them  # exec: optional
+        - name: "--duration"  # exec: optional
+          description: "Simulation duration in seconds"  # exec: optional
+          default: 10.0  # exec: optional
+      source: "README.md:120"  # exec: optional
+  tests:                               # OPTIONAL  # exec: optional
+    framework: "pytest" | "unittest" | "Test.jl" | ...  # exec: optional
+    invocation: "pytest tests/"  # exec: optional
+    source: ...  # exec: optional
+  notes: ...                           # OPTIONAL. free text for anything that doesn't fit  # exec: optional
 ```
 
 ## Section C — `io`
@@ -182,52 +182,52 @@ execution:
 ```yaml
 io:
   inputs:
-    parameters:                        # scalar/array configuration values
-      - name: "k_run"
-        description: "Run-mode tumble rate"
-        default_value: 1.0
-        unit:                          # ontology-mapped to UO
-          value: "per second"
-          iri: "http://purl.obolibrary.org/obo/UO_0000106"
-          ontology_label: "per second"
-          ontology: "uo"
-          mapping_confidence: high
-        biological_meaning:            # ontology-mapped to GO/SBO when applicable
-          value: "rotational diffusion rate"
-          iri: ...
-        source: ...
-        confidence: ...
-    initial_conditions:                # populations, fields, state files
-      - name: "initial_agent_count"
-        value: 100
-        unit: { ... }
-        source: ...
-    data_inputs:                       # external files
-      - name: "ligand_field.csv"
-        purpose: ...
-        format:                        # ontology-mapped to EDAM:format
-          value: "CSV"
-          iri: "http://edamontology.org/format_3752"
-          ontology_label: "Comma-separated values"
-          ontology: "edam"
-        required: true | false
-        source: ...
+    parameters:                        # scalar/array configuration values  # exec: optional
+      - name: "k_run"  # exec: optional
+        description: "Run-mode tumble rate"  # exec: optional
+        default_value: 1.0  # exec: optional
+        unit:                          # ontology-mapped to UO  # exec: optional
+          value: "per second"  # exec: optional
+          iri: "http://purl.obolibrary.org/obo/UO_0000106"  # exec: optional
+          ontology_label: "per second"  # exec: optional
+          ontology: "uo"  # exec: optional
+          mapping_confidence: high  # exec: optional
+        biological_meaning:            # ontology-mapped to GO/SBO when applicable  # exec: optional
+          value: "rotational diffusion rate"  # exec: optional
+          iri: ...  # exec: optional
+        source: ...  # exec: optional
+        confidence: ...  # exec: optional
+    initial_conditions:                # populations, fields, state files  # exec: optional
+      - name: "initial_agent_count"  # exec: optional
+        value: 100  # exec: optional
+        unit: { ... }  # exec: optional
+        source: ...  # exec: optional
+    data_inputs:                       # external files  # exec: important
+      - name: "ligand_field.csv"  # exec: important
+        purpose: ...  # exec: optional
+        format:                        # ontology-mapped to EDAM:format  # exec: optional
+          value: "CSV"  # exec: optional
+          iri: "http://edamontology.org/format_3752"  # exec: optional
+          ontology_label: "Comma-separated values"  # exec: optional
+          ontology: "edam"  # exec: optional
+        required: true | false  # exec: important
+        source: ...  # exec: optional
   outputs:
-    - name: "agent_trajectories"
-      description: "Position over time for each agent"
-      quantity_kind:                   # ontology-mapped to GO/SBO/SIO
-        value: "spatial position"
-        iri: ...
-      unit: { ... }                    # UO
-      format: { ... }                  # EDAM:format
-      destination: "output/<timestamp>/"
-      source: ...
-  experiment_protocol:                 # MIASE-style: how a typical run is set up
-    description: ...
-    timestep: { value, unit, source, confidence }
-    duration: { value, unit, source, confidence }
-    observables: [ ... ]
-    source: ...
+    - name: "agent_trajectories"  # exec: optional
+      description: "Position over time for each agent"  # exec: optional
+      quantity_kind:                   # ontology-mapped to GO/SBO/SIO  # exec: optional
+        value: "spatial position"  # exec: optional
+        iri: ...  # exec: optional
+      unit: { ... }                    # UO  # exec: optional
+      format: { ... }                  # EDAM:format  # exec: optional
+      destination: "output/<timestamp>/"  # exec: important
+      source: ...  # exec: optional
+  experiment_protocol:                 # MIASE-style: how a typical run is set up  # exec: optional
+    description: ...  # exec: optional
+    timestep: { value, unit, source, confidence }  # exec: optional
+    duration: { value, unit, source, confidence }  # exec: optional
+    observables: [ ... ]  # exec: optional
+    source: ...  # exec: optional
 ```
 
 ## `provenance`
