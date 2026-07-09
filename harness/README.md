@@ -7,13 +7,13 @@ so the skill's `ols-ontology` MCP dependency is replaced by a small Pi extension
 
 ## What's here
 
-| Path | Role |
-|---|---|
-| `Dockerfile` | node:24 + Pi + skill + OLS extension. **Build from repo root.** |
+| Path | Role                                                                                                                          |
+|---|-------------------------------------------------------------------------------------------------------------------------------|
+| `Dockerfile` | node:24 + Pi + skill + OLS extension. **Build from repo root.**                                                               |
 | `extensions/ols/index.ts` | Registers `searchClasses`, `fetch`, `listEmbeddingModels`, `searchClassesWithEmbeddingModel` as native Pi tools over OLS4 REST. |
-| `pi/settings.json` | Wires the skill + extension; no MCP. |
-| `pi/APPEND_SYSTEM.md` | Tells the model the OLS tools are native (drop the `ols-ontology:` prefix). |
-| `entrypoint.sh` | `pi --mode json -p "/skill:biomodel-annotator annotate <target>"`. |
+| `pi/settings.json` | Wires the skill + extension; no MCP.                                                                                          |
+| `pi/APPEND_SYSTEM.md` | Tells the model the OLS tools are native (drop the `ols-ontology:` prefix).                                                   |
+| `entrypoint.sh` | Launches the container/pod that performs the annotation.                                                                      |
 
 The skill files (`SKILL.md`, `references/`) are **unchanged** — they're copied into
 the image at build time.
