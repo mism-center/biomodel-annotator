@@ -36,9 +36,10 @@ COPY harness/pi/APPEND_SYSTEM.md /opt/pi/APPEND_SYSTEM.md
 COPY harness/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Run non-root. node user (uid/gid 1000) is baked into the base image.
-RUN mkdir -p /workspace && chown -R node:node /workspace /opt/pi /opt/skills
-USER node
+# Run non-root as `app` (system user, matching model-discovery/api/Dockerfile).
+RUN groupadd --system app && useradd --system --gid app --no-create-home app \
+  && mkdir -p /workspace && chown -R app:app /workspace /opt/pi /opt/skills
+USER app
 
 WORKDIR /workspace
 ENTRYPOINT ["pi"]
