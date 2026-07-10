@@ -162,14 +162,16 @@ execution:
     gpu_required: { value, source, confidence }   # boolean
     parallelism: "single" | "multi-thread" | "multi-process" | "MPI" | "GPU" | "distributed"
     typical_runtime: { value, unit, source, confidence }  # e.g. "minutes", "hours"
-  entry_points:                        # REQUIRED (non-empty list). one entry per command the user might invoke
-    - command: "python -m vivarium_chemotaxis.experiments.run_chemotaxis"
-      purpose: "Run the main chemotaxis experiment"
-      arguments:                       # capture if README documents them
+  entry_points:                        # REQUIRED (non-empty list). one entry per runnable module/command the user might invoke
+    - command: "python run_model.py --config config.yaml"   # REQUIRED
+      purpose: "Run the main simulation"                     # REQUIRED
+      arguments:                       # OPTIONAL. capture if README documents them
         - name: "--duration"
           description: "Simulation duration in seconds"
           default: 10.0
-      source: "README.md:120"
+      default_output_location: "out/run_model/"  # OPTIONAL. repo-relative path this entry writes results to (dir or file). Must be relative to the repo root — never absolute. Omit/null if the entry writes nothing or the location can't be determined.
+      source: "run_model.py"           # REQUIRED. the file that makes this runnable: the module path with the __main__ block, or the config declaring the script (pyproject.toml/setup.py). NOT a README line ref.
+      confidence: ...                  # REQUIRED. high = declared script or verified __main__/runnable file; inferred = command reconstructed without confirming the file runs
   tests:                               # OPTIONAL
     framework: "pytest" | "unittest" | "Test.jl" | ...
     invocation: "pytest tests/"
@@ -240,7 +242,7 @@ provenance:
   files_inspected:
     - "README.md"
     - "pyproject.toml"
-    - "vivarium_chemotaxis/experiments/run_chemotaxis.py"
+    - "src/run.py"
   validation:                            # REQUIRED. result of the final Sections A & B validation gate (scripts/validate.py)
     method: "cli" | "manual"             # "cli" = ran scripts/validate.py; "manual" = checked by hand against schema.md REQUIRED list
     status: "pass" | "fail"              # final status when the annotation was written (should be "pass")
@@ -256,11 +258,11 @@ provenance:
         - { ontology: "chebi", query: "alpha-methylaspartate", strategy: "lexical", hits: 0, accepted: false, reason: "no hits" }
         - { ontology: "chebi", query: "...", strategy: "embedding", hits: 0, accepted: false, reason: "embedding fallback unavailable (no can_embed=true model)" }
   partial_annotation_scope:              # if the run intentionally annotated a subset (e.g. only one of several processes in a multi-process repo), state what was IN scope. Empty/null means full coverage.
-    in_scope: ["chemotaxis/processes/chemoreceptor_cluster.py"]
+    in_scope: ["src/processes/module_a.py"]
     deferred:
-      - path: "chemotaxis/processes/flagella_motor.py"
-        reason: "same Vivarium 'defaults' pattern as chemoreceptor_cluster; deferred for token budget"
-      - path: "chemotaxis/processes/coarse_motor.py"
+      - path: "src/processes/module_b.py"
+        reason: "same parameter/config pattern as module_a; deferred for token budget"
+      - path: "src/processes/module_c.py"
         reason: "same pattern; deferred"
   human_review_required: true
   notes: ...

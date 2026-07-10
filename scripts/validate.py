@@ -82,6 +82,11 @@ REQUIRED_SECTION_B: list[tuple[str, str]] = [
     ("entry_points",     "list"),
 ]
 
+# Required keys on each execution.entry_points item (schema: command/purpose/source/confidence
+# REQUIRED; arguments/default_output_location OPTIONAL). default_output_location, when present,
+# must be a repo-relative path.
+REQUIRED_ENTRY_POINT_KEYS: list[str] = ["command", "purpose", "source", "confidence"]
+
 # Fields eligible for ontology mapping in the full annotation
 _ONTOLOGY_ELIGIBLE_PATHS = [
     "model.model_class",
@@ -282,6 +287,31 @@ class Validator:
                 sub_key = kind.split(":", 1)[1]
                 if not isinstance(raw, dict) or raw.get(sub_key) is None:
                     empty.append(f"{path}.{sub_key}")
+
+        # Strict per-item enforcement of entry_points (only when it is a non-empty list;
+        # the "list" kind above already flags a missing/empty entry_points).
+        entry_points = execution.get("entry_points")
+        if isinstance(entry_points, list):
+            for i, ep in enumerate(entry_points):
+                base = f"execution.entry_points[{i}]"
+                if not isinstance(ep, dict):
+                    empty.append(base)
+                    continue
+                for key in REQUIRED_ENTRY_POINT_KEYS:
+                    if ep.get(key) is None:
+                        missing.append(f"{base}.{key}")
+                    elif _get_leaf_value(ep.get(key)) in (None, ""):
+                        empty.append(f"{base}.{key}")
+                # default_output_location is optional, but when present must be a
+                # repo-relative path (reject absolute POSIX and Windows-drive paths).
+                loc = ep.get("default_output_location")
+                if loc is not None and (
+                    not isinstance(loc, str)
+                    or loc == ""
+                    or os.path.isabs(loc)
+                    or (len(loc) >= 2 and loc[1] == ":")
+                ):
+                    empty.append(f"{base}.default_output_location")
 
         return {"missing": missing, "empty": empty}
 
