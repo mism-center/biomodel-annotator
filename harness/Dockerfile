@@ -56,4 +56,4 @@ RUN groupadd --system --gid 995 app && useradd --system --uid 995 --gid app --no
 USER app
 
 WORKDIR /workspace
-ENTRYPOINT ["pi"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
