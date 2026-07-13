@@ -36,8 +36,22 @@ COPY harness/pi/APPEND_SYSTEM.md /opt/pi/APPEND_SYSTEM.md
 COPY harness/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Run non-root as `app` (system user, matching model-discovery/api/Dockerfile).
-RUN groupadd --system app && useradd --system --gid app --no-create-home app \
+# uv writable state (managed Python + wheel cache) baked at BUILD time into an
+# exec-safe, world-writable dir. At runtime /tmp is a small tmpfs mounted
+# noexec, so uv's fallback of downloading CPython there fails to exec it
+# (EACCES). /opt is exec-safe and 0777 makes it usable under any --user.
+# ENV points uv here so the plain `uv run` in SKILL.md needs no /tmp override.
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python \
+    UV_CACHE_DIR=/opt/uv/cache
+RUN mkdir -p /opt/uv/python /opt/uv/cache \
+  && uv python install 3.13 \
+  && uv run /opt/skills/biomodel-annotator/scripts/validate.py --help >/dev/null 2>&1 || true \
+  && chmod -R 0777 /opt/uv
+
+# Run non-root as `app`. UID/GID pinned to 995 to match the owner of the
+# iRODS-mounted files at /workspace — `useradd --system` otherwise picks the
+# first free UID (drifted 995→999), leaving /workspace unreadable.
+RUN groupadd --system --gid 995 app && useradd --system --uid 995 --gid app --no-create-home app \
   && mkdir -p /workspace && chown -R app:app /workspace /opt/pi /opt/skills
 USER app
 
