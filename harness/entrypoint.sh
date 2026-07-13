@@ -8,6 +8,6 @@ set -euo pipefail
 TARGET="${MODEL_INPUT:-/workspace}"
 
 exec pi --mode json --approve --model ${AI_MODEL} --stream=all \
-  --provider azure-openai-response \
+  --provider azure-openai-responses \
   --append-system-prompt "$(cat /opt/pi/APPEND_SYSTEM.md)" \
   -p "/skill:biomodel-annotator annotate ${TARGET}, ${PROMPT}"
