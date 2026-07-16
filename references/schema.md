@@ -119,7 +119,7 @@ model:
     - qualifier: "bqmodel:isDerivedFrom", "bqbiol:isVersionOf", ... # REQUIRED 
       identifier: { scheme, value } # REQUIRED 
       source: ... # REQUIRED
-  funding:                             # OPTIONAL. Grant numbers or funding acknowledgments (e.g., "NIAID U19 AI123456").
+  funding:                             # REQUIRED. Grant numbers or funding acknowledgments (e.g., "NIAID U19 AI123456").
     - funding_organization:  ...   # REQUIRED 
       grant_number: ... # REQUIRED 
       acknowledgment: .... # REQUIRED
