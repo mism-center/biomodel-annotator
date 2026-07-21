@@ -312,6 +312,27 @@ class Validator:
                     or (len(loc) >= 2 and loc[1] == ":")
                 ):
                     empty.append(f"{base}.default_output_location")
+                # arguments is optional, but when present each item needs a
+                # non-empty `name` and assigned positions (truthy) must be unique
+                # within the entry (mirrors the consumer's EntryPoint/Argument shape).
+                args = ep.get("arguments")
+                if args is not None:
+                    if not isinstance(args, list):
+                        empty.append(f"{base}.arguments")
+                    else:
+                        positions: list[Any] = []
+                        for j, arg in enumerate(args):
+                            abase = f"{base}.arguments[{j}]"
+                            if not isinstance(arg, dict) or _get_leaf_value(
+                                arg.get("name")
+                            ) in (None, ""):
+                                empty.append(f"{abase}.name")
+                                continue
+                            pos = arg.get("position")
+                            if pos:  # 0/None = unassigned option; ignore
+                                positions.append(pos)
+                        if len(positions) != len(set(positions)):
+                            empty.append(f"{base}.arguments (duplicate positions)")
 
         return {"missing": missing, "empty": empty}
 
