@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Claude Code **skill** plus a small Python support layer. The skill itself is three Markdown files that Claude Code loads at invocation time:
+A Claude Code **skill** plus a small Python support layer. The skill's core is three Markdown files that Claude Code loads at invocation time:
 
 - `SKILL.md` — frontmatter (`name`, `description`) + the full operating procedure for the `biomodel-annotator` skill.
 - `references/schema.md` — the YAML schema the skill must emit.
 - `references/ontologies.md` — per-field routing to OLS ontologies + query strategy.
+
+Alongside these are **framework reference files** (`references/<framework>-model-reference.md`, e.g. `vivarium-model-reference.md`) — framework-specific extraction heuristics loaded **conditionally**, not on every run. `SKILL.md` Pass 0 has a Framework dispatch table (signal → reference file); when a signal matches, that one file is read and augments Passes 1–3. This keeps per-run token cost flat: a non-matching model pays only the dispatch table, not the reference bodies. Adding a framework = a new `references/<framework>-model-reference.md` + one dispatch row in `SKILL.md`; the file must point back at `schema.md` for field shape and never redefine schema fields.
 
 The Python support layer is a single bundled script that ships with the skill in every release zip:
 
@@ -53,3 +55,5 @@ Every leaf value field in the schema carries `value` + `source` + `confidence`. 
 - Provenance shape, especially `unmapped_fields` and `partial_annotation_scope`, and how it is split across `metadata.yaml` (identity/ontology) and `execution.yaml` (validation).
 
 When changing one of these three files, check the other two.
+
+Framework reference files (`references/<framework>-model-reference.md`) must additionally: use the exact field names/envelopes from `schema.md` (never invent fields), keep any command-form or classification guidance consistent with the closed vocabularies in `SKILL.md`, and stay generic to the framework rather than any single example repo. `schema.md` itself must stay framework-neutral — framework-specific examples belong in the framework file, not the schema.

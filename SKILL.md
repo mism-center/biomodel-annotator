@@ -55,6 +55,14 @@ Before reading anything in depth, get the lay of the land:
 
 Write a brief inventory note to yourself (mental or scratch). You'll cite specific files in the YAML's `source` fields.
 
+**Framework dispatch.** After inventory, check the model against the table below. If a row's signal matches, **read that one reference file now and apply its framework-specific heuristics throughout Passes 1–3**. **Precedence: where the framework file and a generic pass instruction conflict, the framework file WINS** — it is more specific to the artifact in front of you. (Example: if the framework file says "enumerate every runnable module" and Pass 2's generic bullet says "copy the README's literal commands," you enumerate.) The one thing a framework file never overrides is `references/schema.md` — field names, envelopes, and required/optional status always come from the schema. If no row matches, skip this step entirely and do not read any framework file — the generic passes cover it.
+
+| Framework | Signal (any) | Reference |
+|---|---|---|
+| Vivarium | dependency `vivarium`/`vivarium-core`; any import from `vivarium.core.*` | `references/vivarium-model-reference.md` |
+
+(One row per supported framework. Match at most one; the generic entry-point / classification / I/O guidance in Passes 1–3 still applies for everything the framework file doesn't override.)
+
 ### Pass 1 — Model identity & biology (Section A)
 
 Read the README first; it's where authors put the high-level pitch. Then skim the top of the main module / entry script. You're looking for:
@@ -98,7 +106,9 @@ You want a reviewer to be able to run this model after reading the YAML. Pull ou
 - **Dependencies**: read `requirements*.txt`, `pyproject.toml [project] dependencies` and any optional-dependencies groups, `environment.yml`, `Pipfile`, `Project.toml`, `package.json`, `DESCRIPTION` Imports/Depends. Capture name + version constraint. Don't try to expand transitive deps.
 - **System-level dependencies**: anything in `apt-get install` lines of the Dockerfile, README "Installation" prerequisites (compilers, BLAS, CUDA, MPI, GraphViz, Java).
 - **Compute requirements**: GPU? Multi-core / MPI? Approximate memory and runtime if the README mentions them. Note "unknown" rather than guessing.
-- **Entry points / how to run**: the literal command(s) from README "Usage" sections or `[project.scripts]`. Include arguments where reasonable.
+- **Entry points / how to run**: `[project.scripts]` / `console_scripts` first, then the commands in README "Usage" sections, then any additional runnable modules you can enumerate structurally (a `__main__` block, a `bin/` script, a notebook). **Decompose the command.** The `command` field is the **base invocation only** — interpreter + script/module, plus `<PLACEHOLDER>` tokens for required positionals. Never inline flags/options as free-text (no `[--foo]`, no `--config x`). Whenever an entry parses arguments (argparse, click, `sys.argv`, or documented console-script flags), enumerate every flag/option/positional into the structured **`arguments`** list — each with `name` (the canonical CLI token, not a doc label), `default`, `enums`, `data_type` (`"bool"` for presence flags), `position` (>=1 for positionals, unique per entry), and `user_can_override`. See `references/schema.md` for the exact field shape. Emit `arguments: []` only when the entry truly takes none. Each entry's **`source` is the file that makes it runnable** — the module path holding the `__main__` block, or the config that declares the script (`pyproject.toml` / `setup.py`) — **not** a README line reference; if the README also documents it you may append that, but the runnable file comes first. Each entry also carries a **`confidence`**: `high` for a declared console-script or a file you confirmed has a `__main__` / is otherwise runnable, `inferred` when you reconstructed the command without confirming the file runs. When an entry writes results to a known directory or file, record it in the optional **`default_output_location`** as a **repo-relative** path (never absolute); omit or null it when the entry produces no files or the location is undeterminable.
+
+  **Completeness rule (mirrors the Pass 4 reproducibility invariant).** `entry_points` must be *exhaustive*, not a representative sample. The README's "Usage" section usually shows one command per way-of-running; the repo often exposes many more runnable modules than the README documents. Enumerate them structurally (e.g. `grep -rl "__main__"`, the `[project.scripts]` table, `bin/`) rather than copying only the README's examples — building the full list this way is high-confidence **structural** extraction, so it is not constrained by the "copy only what a source states verbatim" discipline that governs Passes 0–3. If you deliberately leave any runnable entry point out (e.g. a budget cap on a large repo), you MUST record the omitted scope in `provenance.partial_annotation_scope.deferred` — a non-empty `entry_points` list that silently drops runnable modules is not acceptable. (Framework reference files may refine *which* modules count as entry points; when one is loaded, it wins per the Pass 0 precedence rule.)
 - **Tests**: presence and how to invoke them.
 
 If the model is just a single file (e.g. an SBML file), execution metadata is mostly about the simulator it targets — capture that instead.
@@ -232,6 +242,8 @@ Pointers and per-field ontology choices are in `references/ontologies.md`.
 - `references/ontologies.md` — which ontology to consult for which field, with OLS query tips.
 
 Read both before writing your final output.
+
+**Framework reference files** (`references/<framework>-model-reference.md`, e.g. `vivarium-model-reference.md`) are **conditionally** loaded — read one only when the Pass 0 Framework dispatch table matches. They carry framework-specific extraction heuristics that **override the generic pass guidance on conflict** (see Pass 0 "Framework dispatch" precedence rule); they point back at `schema.md` for field shape and never redefine schema fields. Unlike `schema.md`/`ontologies.md`, they are not read on every run.
 
 ## Available scripts
 
