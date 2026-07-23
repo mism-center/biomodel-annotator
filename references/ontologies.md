@@ -47,7 +47,7 @@ Accept the top hit only when its label matches the input term closely (case-inse
 | Field | Ontology | OLS `ontologyId` | Notes |
 |---|---|---|---|
 | `language.name` | Software Ontology | `swo` | Search for "Python language", "R programming language", "Julia". SWO has both languages and tools. |
-| `dependencies.runtime[].name` | Software Ontology | `swo` | Map well-known libraries (NumPy, SciPy, COBRApy) where they exist in SWO; many small libs won't be in any ontology — leave `iri: null` and that's fine. |
+| `dependencies.runtime[].name` | Software Ontology | `swo` | **Scoped skip (constraint relaxation):** Attempt SWO mapping only for libraries in this well-known list: `numpy`, `scipy`, `pandas`, `matplotlib`, `vivarium-core`, `vivarium-cell`, `cobrapy`, `libsbml`, `neuron`, `nest-simulator`, `brian2`. For all others, immediately set `iri: null, mapping_confidence: none` without an OLS call, and record the category once in `provenance.partial_annotation_scope.deferred`: `{reason: "dependency_skip", scope: "runtime dependencies not in well-known-library list"}`. |
 | `environment_kind` | EDAM (operation/format) + SWO | `edam`, `swo` | "Docker" / "Singularity" are in SWO. Pipeline systems (Nextflow, Snakemake) are in SWO too. |
 | `compute.parallelism` | EDAM topic / NCIT | `edam`, `ncit` | Often not worth mapping — leave free-text if no good hit. |
 
