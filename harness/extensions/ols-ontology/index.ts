@@ -24,15 +24,38 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@earendil-works/pi-ai";
 
 const OLS4_BASE = "https://www.ebi.ac.uk/ols4/api";
+const OLS_TIMEOUT_MS = 5000;
+
+// In-session result cache: avoids redundant EBI round-trips for identical
+// (query, ontologyId, pageSize) pairs within a single annotation run.
+const searchCache = new Map<string, { numFound: number; docs: unknown[] }>();
 
 async function olsGet(path: string): Promise<unknown> {
-	const resp = await fetch(`${OLS4_BASE}${path}`, {
-		headers: { Accept: "application/json" },
-	});
-	if (!resp.ok) {
-		throw new Error(`OLS4 request failed: ${resp.status} ${resp.statusText} — ${OLS4_BASE}${path}`);
+	async function attempt(): Promise<unknown> {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), OLS_TIMEOUT_MS);
+		try {
+			const resp = await fetch(`${OLS4_BASE}${path}`, {
+				headers: { Accept: "application/json" },
+				signal: controller.signal,
+			});
+			if (!resp.ok) {
+				throw new Error(`OLS4 request failed: ${resp.status} ${resp.statusText} — ${OLS4_BASE}${path}`);
+			}
+			return resp.json();
+		} finally {
+			clearTimeout(timer);
+		}
 	}
-	return resp.json();
+	try {
+		return await attempt();
+	} catch (err) {
+		// Retry once on timeout (AbortError) or transient network failure.
+		if (err instanceof Error && (err.name === "AbortError" || err.name === "TypeError")) {
+			return await attempt();
+		}
+		throw err;
+	}
 }
 
 export default function (pi: ExtensionAPI) {
@@ -87,6 +110,21 @@ export default function (pi: ExtensionAPI) {
 		}),
 		async execute(_id, params) {
 			const rows = params.pageSize ?? 5;
+			const cacheKey = `${params.query}::${params.ontologyId}::${rows}`;
+
+			const cached = searchCache.get(cacheKey);
+			if (cached) {
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: JSON.stringify({ numFound: cached.numFound, docs: cached.docs, cached: true }, null, 2),
+						},
+					],
+					details: { numFound: cached.numFound, returned: cached.docs.length, query: params.query, ontologyId: params.ontologyId, cached: true },
+				};
+			}
+
 			const qs = new URLSearchParams({
 				q: params.query,
 				ontology: params.ontologyId,
@@ -99,6 +137,9 @@ export default function (pi: ExtensionAPI) {
 			};
 			const docs = data?.response?.docs ?? [];
 			const numFound = data?.response?.numFound ?? 0;
+
+			searchCache.set(cacheKey, { numFound, docs });
+
 			return {
 				content: [
 					{

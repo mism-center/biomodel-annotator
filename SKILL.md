@@ -121,6 +121,8 @@ This is usually the section with the least explicit documentation; expect to rea
 
 **Reading budget.** Open the primary entry point and at most 2–3 modules it directly imports — usually a config/parameters module, a top-level model class, and an output/writer module. If you can't find a field's value in those files, leave it with `confidence: none` and a brief curator note rather than doing a depth-first search of the whole codebase. A first-pass annotation is allowed to be incomplete; an over-budget one that stalls is not.
 
+**Parameter extraction cap (constraint relaxation).** Extract at most **10 parameters per file**. If a file's `defaults` dict or config block contains more, extract the 10 with the most complete inline documentation (docstring, type hint, or unit comment) and record the rest in `provenance.partial_annotation_scope.deferred` as a single entry: `{reason: "parameter_cap", scope: "<module>: <N> total parameters, 10 extracted", passes_affected: ["3", "4"]}`. This bounds Pass 4 OLS call count to a predictable maximum.
+
 **Fast path — config-driven models.** If a config file governs the run (`config.yaml`, `params.json`, `settings.toml`, an `experiments/*.yaml`, or similar), treat it as the source of truth for `io.inputs.parameters` and derive the schema almost 1:1: each top-level key becomes a parameter entry with its value as `default_value`, and the file path goes in `source`. Still infer units and biological meaning from surrounding comments, docstrings, and variable names — the config file alone rarely tells you what the parameters *mean*, only what they're set to. If multiple config files exist (e.g. `experiments/chemotaxis_default.yaml`, `experiments/chemotaxis_long.yaml`), pick the one the README points to as canonical, or the one with `default` in its name, and note the alternatives in `notes`.
 
 For **inputs**, distinguish three flavors:
@@ -153,7 +155,9 @@ Strategy per term:
 
 Don't try to map purely structural fields (version strings, file paths, license SPDX codes — SPDX is already a controlled vocabulary).
 
-Batch tip: group queries by ontology so you reuse the same `ontologyId` repeatedly. This keeps similar terms mapped consistently.
+Batch tip: group queries by ontology and issue all same-ontology calls **in a single parallel turn** — emit multiple `ols-ontology:searchClasses` calls with the same `ontologyId` as one batch rather than one at a time. This keeps similar terms mapped consistently and reduces wall time.
+
+**IRI reuse shortcut (constraint relaxation).** If the exact same `(query string, ontologyId)` pair was already looked up and *accepted* earlier in this Pass 4 session, reuse the IRI without a new OLS call. Set `mapping_confidence` one step lower than the original (`high` → `medium`, `medium` → `low`), and add `notes: "IRI reused from <source_field_path>"`. Do not add a duplicate entry to `provenance.unmapped_fields`. Only apply to *identical* query strings — never to similar-but-different terms.
 
 ### Assembly
 
@@ -161,11 +165,13 @@ Once all four passes are done:
 
 1. Render the content following `references/schema.md`. Use the BioModels/MIRIAM qualifier vocabulary where it applies (e.g. `bqbiol:is`, `bqbiol:hasTaxon`, `bqmodel:isDerivedFrom`).
 2. Build the `provenance` content: timestamp, the path you annotated, the list of source files you actually read, the OLS lookups, `unmapped_fields`, `partial_annotation_scope`, a `validation` sub-block (see `references/schema.md`), and a `human_review_required: true` flag.
-3. Write the **annotation package** as a folder `metadata-package/` **inside the model's own directory** (the repo/folder you annotated — not your cwd), with two YAML files:
+3. **Pre-flight self-check.** Before writing any YAML, verify every required Section A field (`model.*`) from `references/schema.md` is present in your Pass 1 extractions, and every required Section B field (`execution.*`) is present in your Pass 2 extractions. Resolve gaps now — while source files are still fresh in context — by setting missing fields to `confidence: none` / `not_determined` rather than omitting them. The validator rejects *absent* keys, not empty-confidence values. This pre-flight eliminates the most common fix-and-rerun loops without running the validator twice.
+
+4. Write the **annotation package** as a folder `metadata-package/` **inside the model's own directory** (the repo/folder you annotated — not your cwd), with two YAML files:
    - `metadata-package/metadata.yaml` — `schema_version`, `model:`, and the identity/ontology half of `provenance:` (`files_inspected`, `ontology_lookups`, `unmapped_fields`, `partial_annotation_scope`).
    - `metadata-package/execution.yaml` — `schema_version`, `execution:`, `io:`, and the `validation` half of `provenance:`.
    - Repeat the run-stamp (`annotated_at`, `annotated_by`, `source_root`, `human_review_required`) in both files so each stands alone.
-4. **Validation gate — mandatory, run on the package you just wrote. Do not present the annotation until this exits 0.** Run the bundled validator against the real package (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server).
+5. **Validation gate — mandatory, run on the package you just wrote. Do not present the annotation until this exits 0.** Run the bundled validator against the real package (`uv run` resolves the PyYAML dependency inline — no install step, no MCP server).
 
    **Locating the script.** `scripts/validate.py` ships *inside this skill's directory*, which is **not** your current working directory (your cwd is the model repo you are annotating). Resolve the path against the skill directory — the directory holding this `SKILL.md`. Your harness tells you where that is: it loads the skill with a `location=<.../SKILL.md>` attribute / a "References are relative to `<dir>`" line. Take that `<dir>` and run `<dir>/scripts/validate.py`. Do **not** run a bare `scripts/validate.py` (resolves against cwd and fails) and do **not** `find`/`rg` the filesystem for it — the path is already known from the skill location.
 
@@ -176,13 +182,13 @@ Once all four passes are done:
 
    (Important: Try `uv` first, if `uv` is unavailable, fall back to `python3 "$SKILL_DIR/scripts/validate.py" --package <model-repo-root>/metadata-package` with PyYAML installed.) It reconstructs the `model:` and `execution:` sections from the two files, checks them against the REQUIRED fields in `references/schema.md`, prints a JSON result to stdout, and sets its exit code:
 
-   - **Exit 0 (`status: "pass"`):** overwrite `provenance.validation` **in `execution.yaml`** with `{method: "cli", status: "pass", flagged_fields: []}` — this must be a populated mapping, not an empty `{}`. Then proceed to step 5.
+   - **Exit 0 (`status: "pass"`):** overwrite `provenance.validation` **in `execution.yaml`** with `{method: "cli", status: "pass", flagged_fields: []}` — this must be a populated mapping, not an empty `{}`. Then proceed to step 6.
    - **Exit 1 (`status: "fail"`):** this is an instruction to go back and fix, not a reason to stop. The `missing_required_fields` and `empty_required_fields` lists name every field needing attention by path (e.g. `"model.name"` → `metadata.yaml`, `"execution.entry_points"` → `execution.yaml`). For each path: go back to the pass that owns it (Pass 1 for `model.*`, Pass 2 for `execution.*`), re-read the source files, and fill or correct the field in the written file — do not fabricate a value to satisfy the check; if a source truly lacks it, that is a `confidence: none` / `not_determined` value, which still resolves the structural gate. Record every path you touched in `execution.yaml`'s `provenance.validation.flagged_fields`, then re-run the validator. Repeat this fix-and-re-run loop until it exits 0. Never present a `status: "fail"` annotation.
    - **Exit 2:** usage error (missing file or unparseable YAML) — fix the invocation or the YAML and re-run.
 
    This is the only structural gate and it is not optional. Running it is the definition of "done" — an annotation that has not exited 0 is not finished, regardless of how complete it looks.
-5. Write `metadata-package/README.md` — a model-card summary the curator reads first: model name + one-line type (`model_class` / `formalism`), organism/biology, a "Package contents" file list, what the annotation covers, what was deferred (passes/sections skipped, count of `mapping_confidence: none`), and the fields most needing human review (low/`none` confidence). Keep it skimmable — it mirrors the YAML, it doesn't replace it.
-6. Briefly summarize for the user: what type of model it is, the most notable fields you filled, anything where confidence was low, and which sections need human review most. Then present the package.
+6. Write `metadata-package/README.md` — a model-card summary the curator reads first: model name + one-line type (`model_class` / `formalism`), organism/biology, a "Package contents" file list, what the annotation covers, what was deferred (passes/sections skipped, count of `mapping_confidence: none`), and the fields most needing human review (low/`none` confidence). Keep it skimmable — it mirrors the YAML, it doesn't replace it.
+7. Briefly summarize for the user: what type of model it is, the most notable fields you filled, anything where confidence was low, and which sections need human review most. Then present the package.
 
 ---
 
