@@ -41,7 +41,7 @@ If the user gives you nothing, ask once for one of these.
 
 ## Workflow
 
-The workflow is four passes plus assembly. **Do not start writing the package until you finish all four passes** — earlier passes inform later ones (e.g. knowing the model is a stochastic ABM changes how you describe inputs).
+The workflow is four passes plus assembly, with a short literature pass (1b) hanging off Pass 1. **Do not start writing the package until you finish all four passes** — earlier passes inform later ones (e.g. knowing the model is a stochastic ABM changes how you describe inputs).
 
 **Extraction discipline (Passes 0–3).** These passes are extraction tasks, not creative generation. Copy values verbatim from source files wherever possible — do not paraphrase or rephrase. Prefer `confidence: high` over `confidence: inferred` whenever the source text is explicit. Only use `confidence: inferred` when you are reading between the lines of the source.
 
@@ -96,6 +96,29 @@ Read the README first; it's where authors put the high-level pitch. Then skim th
 - **Version**: from `__version__`, `pyproject.toml`, `package.json`, or git tags.
 
 For every field, record the file you found it in. If you inferred it from context rather than reading it verbatim, set `confidence: inferred`. **For multi-element fields like `model_class` and `formalism`, each list entry must carry its own `source` pointing to distinct evidence** — don't reuse the README citation for every paradigm. If you claim a model is agent-based + ODE, one entry's source should point to where the agent-based framing comes from (often the README or framework name) and the other to where the ODE evidence comes from (a process file's rate equations, a solver import).
+
+### Pass 1b — Read the papers Pass 1 found
+
+Pass 1 finds citations; it cannot see what is at them. For every paper referenced in the model's files — a DOI, a `doi.org` link, or a publisher/PubMed/arXiv/bioRxiv URL — call **`paper_fetch`** once (under a harness without it, use your host's web-fetch tool). Run this before Pass 2 so the paper's own wording is available to Pass 4.
+
+**Always pass the `title` argument when the source prints one.** Publisher sites routinely refuse non-browser clients, and many repos cite a landing-page URL that contains no DOI; the title you have already read is then the only thing that resolves the paper. Skipping it is the difference between a full record and nothing.
+
+**The tool fetches; you interpret.** It returns the bibliographic records verbatim and the full text as readable text with headings (`## `-prefixed) and table rows intact — it pre-extracts nothing, so read what comes back rather than looking for named fields. A paper is a source like any other file: treat it as evidence for **every** field in `references/schema.md` it speaks to, not a listed few. It is often the only source for parts of Section A that repos rarely record.
+
+Request `include: "fulltext"` unless you need identifiers alone; `full_text_available` says whether the paper is in the open-access subset, and the abstract on its own is a poor substitute for the article.
+
+Four things you cannot infer from the paper itself:
+
+- **A paper describes the study; the repo is the model.** What was published routinely exceeds what the code implements. Paper-derived values are capped at `confidence: inferred` and **must never overwrite a value sourced from the repo** — they fill gaps only.
+- **Authorship is not transferable.** Enrich an author you already extracted in Pass 1 (an ORCID, an affiliation), but never add a person to `authors` because they appear on the paper. Model authorship and paper authorship overlap and are not the same set. A corresponding-author email in the record *is* verbatim, so it satisfies the Pass 1 rule against constructing addresses.
+- **Write DOIs bare and lowercase** (`10.3390/e22101101`), never carrying a `https://doi.org/` prefix. Downstream consumers build links by interpolating the value, so a prefixed one renders dead.
+- **Acknowledgements, funding and author contributions are back matter** — they follow the conclusion, references and appendices, so a non-null `full_text_next_offset` means you have not reached them. Page to the end with `offset` before concluding a paper says nothing about them.
+
+Cite the paper, not a repo file: `source: "doi:10.3390/e22101101 (paper_fetch)"`.
+
+If a title lookup is ambiguous the result carries `title_search_candidates` rather than a single record — compare authors, journal and year against the citation in the repo, then re-call with the chosen DOI. Do not guess between them.
+
+**Reproducibility.** Every citation found in Pass 1 must be attempted exactly once. When a fetch returns `status: "unavailable"`, leave the fields as Pass 1 extracted them, do not guess, and record the paper and the reason in `provenance.partial_annotation_scope.deferred`. An unreadable paper is a recorded outcome, not a reason to stall or to invent a value.
 
 ### Pass 2 — Execution environment (Section B)
 
