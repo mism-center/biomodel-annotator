@@ -157,11 +157,11 @@ execution:
       image_name: ...
       source: ...
   compute:                             # OPTIONAL
-    cpu_cores: { value, source, confidence }      # use null if not stated
-    memory_gb: { value, source, confidence }
+    cpu_cores: { value, source, confidence }      # use null if not stated. value is a single integer — never a range ("4-8") or prose ("~4").
+    memory_gb: { value, source, confidence }      # value is a single number — never a range or prose.
     gpu_required: { value, source, confidence }   # boolean
     parallelism: "single" | "multi-thread" | "multi-process" | "MPI" | "GPU" | "distributed"
-    typical_runtime: { value, unit, source, confidence }  # e.g. "minutes", "hours"
+    typical_runtime: { value, unit, source, confidence }  # unit e.g. "minutes", "hours". value is a single number ("30", not "~30 minutes" or "10-20") — put approximations/ranges in notes instead.
   entry_points:                        # REQUIRED (non-empty list). one entry per runnable module/command the user might invoke
     - command: "python run_model.py <config>"   # REQUIRED. BASE invocation ONLY — interpreter + script/module, plus <PLACEHOLDER> tokens for required positionals. Do NOT inline flags/options as free-text (no "[--foo]", no "--config config.yaml"); every flag/option/positional goes in `arguments` below.
       purpose: "Run the main simulation"          # REQUIRED
@@ -230,8 +230,8 @@ io:
       source: ...
   experiment_protocol:                 # MIASE-style: how a typical run is set up
     description: ...
-    timestep: { value, unit, source, confidence }
-    duration: { value, unit, source, confidence }
+    timestep: { value, unit, source, confidence }  # value is a single number, never a range or "examples: ..." list
+    duration: { value, unit, source, confidence }  # value is a single number, never a range ("300-700") or a list of examples — pick one representative value; put the rest in description
     observables: [ ... ]
     source: ...
 ```
@@ -279,6 +279,16 @@ provenance:
 - Lists may be empty (`[]`) — emit them empty rather than omitting.
 - If a whole section is determinable, set its `status` to `not_determined` and explain in `notes`.
 - Use null, not empty strings, for unknown values.
+- Numeric leaf fields (`execution.compute.cpu_cores`/`memory_gb`/`typical_runtime`,
+  `io.experiment_protocol.timestep`/`duration`) must hold a single JSON
+  number. If the source states a range, approximation, or several examples
+  (e.g. "~30 minutes", "0.01–10 depending on process", "examples: 60, 500,
+  2500, 4000"), extract the single most representative value into `value`
+  and put the full range/approximation text in `description` — a range or
+  prose string in these fields breaks downstream type validation in the
+  registry API (confirmed live: `d1cd5d1a-...` and `42e1c7ea-...` both had
+  `GET /models/{id}` 500 for exactly this reason — see
+  `Docs/rangefix/Range-Value-Fix-Plan.md`).
 
 ## Strict definitions for `mapping_confidence` (reproducibility-critical)
 
