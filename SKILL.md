@@ -138,6 +138,8 @@ For **outputs**:
 
 For every parameter and output, **capture units even when they aren't explicit** — infer from context and mark `confidence: inferred`. Units will be mapped to UO IRIs in Pass 4.
 
+**Numeric values are scalars, not ranges.** If a config/docstring/README gives a range or several examples for a parameter, initial condition, or `experiment_protocol.timestep`/`duration` (e.g. "timestep is 0.01-10s depending on process", "~30 minutes for the larger run"), extract one representative number into `value`/`default_value` and record the full range in `description`. A range or prose string in a numeric field breaks downstream type validation in the registry API — see `references/schema.md`'s Conventions reminder.
+
 ### Pass 4 — Ontology mapping via OLS
 
 Now go back through every textual term you've filled in and try to attach an ontology IRI. Use the `ols-ontology` MCP tools. Detailed routing — which ontology to consult for which field — is in `references/ontologies.md`. **Read that file before doing the mapping pass.**

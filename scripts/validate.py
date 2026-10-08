@@ -116,6 +116,51 @@ def _get_leaf_value(field: Any) -> Any:
     return field
 
 
+# Leaf paths that must hold a single int/float value — not a range, not prose.
+# Kept in sync with references/schema.md's Conventions reminder and
+# Docs/rangefix/Range-Value-Fix-Plan.md. Deliberately excludes
+# io.inputs.parameters[].default_value / io.inputs.initial_conditions[].value /
+# execution.entry_points[].arguments[].default, which are legitimately
+# free-form (Any) end to end.
+_NUMERIC_LEAF_PATHS: list[tuple[str, str]] = [
+    ("execution.compute.cpu_cores", "int"),
+    ("execution.compute.memory_gb", "float"),
+    ("execution.compute.typical_runtime", "float"),
+    ("io.experiment_protocol.timestep", "float"),
+    ("io.experiment_protocol.duration", "float"),
+]
+
+
+def _find_non_numeric_leaves(annotation: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return {field_path, value} for each scoped leaf whose value isn't numeric.
+
+    Plain float()/int() attempt, not a regex — a prose string like "~30
+    minutes for the larger efficacy simulation" has no digit-dash-digit
+    range pattern to match but still breaks downstream type validation in
+    the registry API (see Docs/rangefix/Range-Value-Fix-Plan.md Step 0.1).
+    ``kind="int"`` goes through float() first, mirroring the ingest-side
+    ``_num()`` helper in model-discovery's metadata_package.py, so a
+    numeric-ish string like "4.0" is treated consistently by both layers
+    (accepted — either an int or a float is fine here) rather than this
+    checker flagging something ingest would happily store.
+    Warning-only: does not affect the CLI's exit code.
+    """
+    flagged: list[dict[str, Any]] = []
+    for path, kind in _NUMERIC_LEAF_PATHS:
+        node: Any = annotation
+        for part in path.split("."):
+            node = (node or {}).get(part) if isinstance(node, dict) else None
+        val = _get_leaf_value(node)
+        if val is None:
+            continue
+        cast = int if kind == "int" else float
+        try:
+            cast(float(val)) if cast is int else cast(val)
+        except (TypeError, ValueError):
+            flagged.append({"field_path": path, "value": val})
+    return flagged
+
+
 class Validator:
     """Runs all validation checks and returns a report dict."""
 
@@ -763,6 +808,13 @@ if __name__ == "__main__":
 
     v = Validator(input_path=Path(args.input_path))
     result = v._check_structural(None, None, annotation)
+
+    # Warning-only: a non-numeric value in a numeric leaf field (range, prose,
+    # approximation) does not change the exit code, but is surfaced so it
+    # isn't silently written into the package. See Docs/rangefix/Range-Value-Fix-Plan.md.
+    non_numeric = _find_non_numeric_leaves(annotation)
+    if non_numeric:
+        result["range_like_numeric_fields"] = non_numeric
 
     print(json.dumps(result, indent=2))
     sys.exit(0 if result["status"] == "pass" else 1)
