@@ -53,8 +53,31 @@ docker run --rm \
 
 ## Egress
 
-The container needs outbound HTTPS to `api.anthropic.com` (model) and
-`www.ebi.ac.uk` (OLS4). No other network access required.
+The container needs outbound HTTPS to `api.anthropic.com` (model),
+`www.ebi.ac.uk` (OLS4 and Europe PMC) and `doi.org` (paper-fetch content
+negotiation). No other network access required.
+
+Without `doi.org` every paper resolution fails as `unresolved_transport`; run
+the resolution benchmark below from inside the deployment to tell a firewall
+apart from a genuine upstream refusal.
+
+## Benchmarking paper resolution
+
+`bench/resolve-bench.mts` runs `paper_fetch` over a corpus of paper references
+and reports how often it reaches the paper, and why not when it doesn't. No
+model is involved, so it isolates the tool from the agent.
+
+```bash
+node --experimental-strip-types harness/bench/resolve-bench.mts
+node --experimental-strip-types harness/bench/resolve-bench.mts \
+    --corpus harness/bench/corpus.jsonl --json out/resolve-bench.json
+```
+
+`bench/corpus.jsonl` seeds one case per known failure class. The reported rate
+is only as representative as the corpus, so append real citations from model
+repos as you meet them. Cases carrying `expect` act as regression tests (exit 1
+on mismatch); cases carrying `gap` document a deficiency whose current outcome
+is expected but not wanted.
 
 ## Notes / limits
 

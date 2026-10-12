@@ -42,7 +42,34 @@ const USER_AGENT = "biomodel-annotator/0.1 (+https://github.com/mism-center/biom
 // fetched twice in one annotation run.
 const paperCache = new Map<string, unknown>();
 
-type FetchAttempt = { service: string; url: string; ok: boolean; detail?: string };
+/**
+ * `code` is a stable identifier; `detail` is prose for a reader. The resolution
+ * benchmark counts codes and derives its own outcome from them, so a code's
+ * meaning must not be repurposed — doing so silently rewrites history.
+ */
+type FetchAttempt = { service: string; url: string; ok: boolean; code: AttemptCode; detail?: string };
+
+type AttemptCode =
+	| "ok"
+	| "title_no_match"
+	| "title_ambiguous"
+	| "doi_not_registered"
+	| "no_record"
+	| "no_identifier"
+	| "no_pmcid"
+	| "not_open_access"
+	| "edge_blocked"
+	| "paywalled"
+	| "http_error"
+	| "transport_error"
+	| "bad_payload";
+
+function httpErrorCode(status: number): AttemptCode {
+	if (status === 403 || status === 429) return "edge_blocked";
+	if (status === 401 || status === 402) return "paywalled";
+	if (status === 404 || status === 410) return "doi_not_registered";
+	return "http_error";
+}
 
 async function httpGet(url: string, accept: string) {
 	const controller = new AbortController();
@@ -232,7 +259,8 @@ export default function (pi: ExtensionAPI) {
 					attempts.push({
 						service: "europepmc/title",
 						url,
-						ok: hits.length > 0,
+						ok: hits.length === 1,
+						code: hits.length === 1 ? "ok" : hits.length > 1 ? "title_ambiguous" : "title_no_match",
 						detail:
 							hits.length === 1
 								? "one unambiguous hit, used"
@@ -242,7 +270,7 @@ export default function (pi: ExtensionAPI) {
 									: "no record",
 					});
 				} catch (err) {
-					attempts.push({ service: "europepmc/title", url, ok: false, detail: String(err) });
+					attempts.push({ service: "europepmc/title", url, ok: false, code: "transport_error", detail: String(err) });
 				}
 			}
 
@@ -252,12 +280,18 @@ export default function (pi: ExtensionAPI) {
 					const resp = await httpGetRetrying(url, "application/vnd.citationstyles.csl+json");
 					if (resp.status === 200) {
 						csl = jsonOrNull(resp.body);
-						attempts.push({ service: "doi.org", url, ok: csl !== null });
+						attempts.push({
+							service: "doi.org",
+							url,
+							ok: csl !== null,
+							code: csl !== null ? "ok" : "bad_payload",
+						});
 					} else {
 						attempts.push({
 							service: "doi.org",
 							url,
 							ok: false,
+							code: httpErrorCode(resp.status),
 							detail:
 								resp.status === 404
 									? "DOI is not registered — check it was transcribed correctly"
@@ -265,7 +299,7 @@ export default function (pi: ExtensionAPI) {
 						});
 					}
 				} catch (err) {
-					attempts.push({ service: "doi.org", url, ok: false, detail: String(err) });
+					attempts.push({ service: "doi.org", url, ok: false, code: "transport_error", detail: String(err) });
 				}
 			}
 
@@ -281,10 +315,28 @@ export default function (pi: ExtensionAPI) {
 					const hit = ((jsonOrNull(resp.body) as Record<string, any>)?.resultList?.result ??
 						[])[0] as Record<string, unknown> | undefined;
 					europepmc = hit ?? null;
-					attempts.push({ service: "europepmc", url, ok: Boolean(hit), detail: hit ? undefined : "no record" });
+					attempts.push({
+						service: "europepmc",
+						url,
+						ok: Boolean(hit),
+						code: hit ? "ok" : "no_record",
+						detail: hit ? undefined : "no record",
+					});
 				} catch (err) {
-					attempts.push({ service: "europepmc", url, ok: false, detail: String(err) });
+					attempts.push({ service: "europepmc", url, ok: false, code: "transport_error", detail: String(err) });
 				}
+			}
+
+			if (!doi && !europepmc) {
+				attempts.push({
+					service: "input",
+					url: params.url,
+					ok: false,
+					code: "no_identifier",
+					detail: params.title
+						? "no DOI in the input and the title matched no indexed record"
+						: "no DOI in the input and no title was supplied to look it up by",
+				});
 			}
 
 			const pmcid = String(europepmc?.pmcid ?? "");
@@ -300,18 +352,31 @@ export default function (pi: ExtensionAPI) {
 						const text = markupToText(resp.body);
 						totalChars = text.length;
 						fullText = text.slice(offset, offset + limit);
-						attempts.push({ service: "europepmc/fullTextXML", url, ok: true });
+						attempts.push({ service: "europepmc/fullTextXML", url, ok: true, code: "ok" });
 					} else {
-						attempts.push({ service: "europepmc/fullTextXML", url, ok: false, detail: `HTTP ${resp.status}` });
+						attempts.push({
+							service: "europepmc/fullTextXML",
+							url,
+							ok: false,
+							code: httpErrorCode(resp.status),
+							detail: `HTTP ${resp.status}`,
+						});
 					}
 				} catch (err) {
-					attempts.push({ service: "europepmc/fullTextXML", url, ok: false, detail: String(err) });
+					attempts.push({
+						service: "europepmc/fullTextXML",
+						url,
+						ok: false,
+						code: "transport_error",
+						detail: String(err),
+					});
 				}
-			} else if (wantFullText) {
+			} else if (wantFullText && (doi || europepmc)) {
 				attempts.push({
 					service: "europepmc/fullTextXML",
 					url: "",
 					ok: false,
+					code: pmcid ? "not_open_access" : "no_pmcid",
 					detail: pmcid
 						? "not in the open-access subset; full text is unavailable"
 						: "no PMCID; full text is unavailable",
@@ -326,12 +391,13 @@ export default function (pi: ExtensionAPI) {
 						const text = markupToText(resp.body);
 						totalChars = text.length;
 						fullText = text.slice(offset, offset + limit);
-						attempts.push({ service: "direct", url: params.url, ok: true });
+						attempts.push({ service: "direct", url: params.url, ok: true, code: "ok" });
 					} else {
 						attempts.push({
 							service: "direct",
 							url: params.url,
 							ok: false,
+							code: httpErrorCode(resp.status),
 							detail:
 								resp.status === 403
 									? "publisher refused a non-browser client (403); use the DOI or pass title"
@@ -339,7 +405,7 @@ export default function (pi: ExtensionAPI) {
 						});
 					}
 				} catch (err) {
-					attempts.push({ service: "direct", url: params.url, ok: false, detail: String(err) });
+					attempts.push({ service: "direct", url: params.url, ok: false, code: "transport_error", detail: String(err) });
 				}
 			}
 
