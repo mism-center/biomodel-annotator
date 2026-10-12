@@ -3,6 +3,7 @@
   "extensions": [
     "/opt/pi/extensions/event-log",
     "/opt/pi/extensions/ols-ontology",
+    "/opt/pi/extensions/paper-fetch",
     "/opt/pi/extensions/stream-output"
   ]
 }

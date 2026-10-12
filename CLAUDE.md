@@ -28,6 +28,7 @@ Execution is a strict **four-pass workflow plus assembly**, and the passes are n
 
 1. **Pass 0 — Inventory.** Enumerate top-level files; locate entry points.
 2. **Pass 1 — Identity/biology.** README-first; fill Section A.
+2b. **Pass 1b — Literature.** Fetch each paper Pass 1 cited via the `paper_fetch` tool and read it as evidence for any Section A field it speaks to. The tool does transport and markup-to-text conversion only — it deliberately pre-extracts nothing, and `SKILL.md` carries only the constraints the agent cannot infer (paper-vs-repo precedence, authorship non-transferability, bare DOIs, back-matter paging).
 3. **Pass 2 — Execution.** Dependencies, language, container, entry points; Section B.
 4. **Pass 3 — I/O.** Parameters, initial conditions, data inputs, outputs; Section C. Bounded reading budget: entry point + 2–3 directly-imported modules.
 5. **Pass 4 — Ontology mapping** via the external `ols-ontology` MCP. Probe `listEmbeddingModels` once at the start; lexical `searchClasses` first, embedding fallback only if a `can_embed=true` model exists.
