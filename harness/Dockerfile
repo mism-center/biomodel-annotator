@@ -15,7 +15,8 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /usr/local/bin/
 
 # Install pi coding agent globally (still as root). Extensions import
 # @earendil-works/* from this global install — no per-extension npm install.
-RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+ARG PI_VERSION=1.0.4
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_VERSION}
 
 # Pi reads global config (settings, extensions, APPEND_SYSTEM.md) from this dir.
 ENV PI_CODING_AGENT_DIR=/opt/pi
